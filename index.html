@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#32383E">
+<title>EaZy-Workout</title>
+<link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="EaZy-Workout">
+</head>
+<body>
+<header class="top"><div class="in">
+  <svg class="sym" viewBox="14 14 80 80" aria-hidden="true"><g fill="none" stroke-width="7"><path stroke="#F4F5F6" d="M30 30L78 78"/><path stroke="#7F93A3" d="M80 28L60 48M48 60L28 80"/></g><path fill="#F4F5F6" d="M36.36,17.98 L42.02,23.64 L23.64,42.02 L17.98,36.36 Z M27.24,14.51 L31.49,18.76 L18.76,31.49 L14.51,27.24 Z M84.36,65.98 L90.02,71.64 L71.64,90.02 L65.98,84.36 Z M89.24,76.51 L93.49,80.76 L80.76,93.49 L76.51,89.24 Z"/></svg>
+  <div class="brand"><b>EaZy-Workout</b><span class="lbl" id="hdrSub">Bloque 1</span></div>
+  <div class="wkpill"><span class="lbl">Sem</span><b id="hdrWk">1</b><span class="lbl" id="hdrLen">/5</span></div>
+  <button class="iconbtn" id="btnSettings" type="button" aria-label="Ajustes"><svg viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><path d="M14 4v6M8 14v6"/></svg></button>
+</div></header>
+
+<main class="wrap" id="view"></main>
+
+<div id="timer" class="timer" hidden><div class="bar"><b id="timerBar"></b></div><div class="in">
+  <div class="grow"><span class="lbl mono" id="timerLbl">Descanso</span><span class="clock" id="timerClock">0:00</span></div>
+  <button class="btn" id="tMinus" type="button">−15</button><button class="btn" id="tPlus" type="button">+15</button><button class="btn" id="tSkip" type="button">Saltar</button>
+</div></div>
+
+<nav class="bottom" aria-label="Secciones"><div class="in"><span class="ind" id="navInd"></span>
+  <button class="navbtn" data-tab="today" type="button"><svg viewBox="0 0 24 24"><path d="M3 12h4M17 12h4M7 7v10M17 7v10M7 12h10"/></svg>Hoy</button>
+  <button class="navbtn" data-tab="routines" type="button"><svg viewBox="0 0 24 24"><path d="M5 4h14v16H5zM8 9h8M8 13h8M8 17h5"/></svg>Rutinas</button>
+  <button class="navbtn" data-tab="progress" type="button"><svg viewBox="0 0 24 24"><path d="M3 20h18M5 16l5-5 4 3 6-7"/></svg>Progreso</button>
+  <button class="navbtn" data-tab="calendar" type="button"><svg viewBox="0 0 24 24"><path d="M4 6h16v14H4zM4 10h16M8 3v4M16 3v4"/></svg>Calendario</button>
+</div></nav>
+<div id="sheetRoot"></div><div id="toastRoot"></div>
+<input type="file" id="importFile" accept=".json,application/json,text/plain" hidden>
+<script src="data.js"></script>
+<script src="store.js"></script>
+<script src="native.js"></script>
+<script src="poses.js"></script>
+<script src="profile.js"></script>
+<script src="ui-core.js"></script>
+<script src="ui-session.js"></script>
+<script src="ui-home.js"></script>
+<script src="ui-progress.js"></script>
+<script src="ui-views.js"></script>
+</body>
+</html>
