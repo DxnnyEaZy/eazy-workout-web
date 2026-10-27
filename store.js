@@ -11,7 +11,11 @@ async function kvGet(k){try{const p=Pref();if(p){const r=await p.get({key:k});re
 async function kvSet(k,v){try{const p=Pref(),s=v==null?null:JSON.stringify(v);if(p){s==null?await p.remove({key:k}):await p.set({key:k,value:s});return}
   s==null?localStorage.removeItem(k):localStorage.setItem(k,s)}catch(e){console.warn(e)}}
 let saveT=null;
-function save(){clearTimeout(saveT);saveT=setTimeout(()=>kvSet(KEY,{v:2,routines:S.routines,custom:S.custom,schedule:S.schedule,sessions:S.sessions,body:S.body,goals:S.goals,profile:S.profile,demoDone:S.demoDone,settings:S.settings}),250)}
+const snapshot=()=>({v:2,routines:S.routines,custom:S.custom,schedule:S.schedule,sessions:S.sessions,body:S.body,goals:S.goals,profile:S.profile,demoDone:S.demoDone,settings:S.settings});
+/* guardado inmediato (sin esperas): en web también a localStorage de forma síncrona, para no perder nada si se cierra la app */
+function save(){clearTimeout(saveT);const d=snapshot();try{if(!Pref())localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}saveT=setTimeout(()=>kvSet(KEY,d),0)}
+function flush(){try{const d=snapshot();if(!Pref())localStorage.setItem(KEY,JSON.stringify(d));else kvSet(KEY,d);if(active)kvSet(KEY_ACTIVE,active)}catch(e){}}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")flush()});window.addEventListener("pagehide",flush);
 function saveActive(){kvSet(KEY_ACTIVE,active)}
 function mondayOf(d){const x=new Date(d);x.setHours(0,0,0,0);x.setDate(x.getDate()-((x.getDay()+6)%7));return x}
 const isoDay=d=>{const x=new Date(d);return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}-${String(x.getDate()).padStart(2,"0")}`};

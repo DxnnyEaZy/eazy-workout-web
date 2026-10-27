@@ -1,6 +1,6 @@
 "use strict";
 /* ===== Perfil, plantillas, objetivos y primer arranque (versión para amigos) ===== */
-const APP_VERSION="2.6";
+const APP_VERSION="2.7";
 /* ejercicios de gimnasio */
 [["press-banca","Press banca","Pecho","kg"],["press-militar","Press militar","Hombro","kg",1],["elev-lat","Elevaciones laterales","Hombro","kg"],
  ["fondos","Fondos en paralelas","Pecho","reps"],["ext-triceps","Extensión de tríceps","Con peso","kg"],["jalon","Jalón al pecho","Espalda","kg"],
@@ -133,3 +133,15 @@ function feedbackSheet(){let useful="";
       const p=S.profile||{},msg=`[EaZy-Workout ${APP_VERSION}] Sugerencia de ${p.name||"un amigo"}\n¿Útil?: ${useful||"-"}\n${t}\n—\nObjetivos: ${(p.goals||[]).join(", ")} · ${NATIVE?"Android":"Web"} · ${real().length} sesiones`;
       if(NATIVE){const r=await shareText("Sugerencia EaZy-Workout",msg);if(r==="copied")toast("Copiado: pégalo en WhatsApp")}
       else{location.href="https://wa.me/?text="+encodeURIComponent(msg)}closeSheet()}})}
+
+/* iPhone: Safari y la app de la pantalla de inicio guardan los datos por separado. Instalar antes de configurar. */
+function iosInstallGate(){document.body.classList.add("onb");
+  view().innerHTML=`<div class="onbwrap rise"><p class="lbl">Antes de empezar</p><h1>Instálala en tu iPhone</h1>
+  <p class="sub">En iPhone, lo que guardes aquí en Safari no pasa a la app de la pantalla de inicio. Instálala primero y configúrala desde el icono.</p>
+  <div class="stack" style="margin-top:20px">
+    <div class="item"><span class="big" style="font-size:28px;width:28px">1</span><div class="grow t">Toca el botón <b>Compartir</b> de Safari (el cuadrado con la flecha hacia arriba)</div></div>
+    <div class="item"><span class="big" style="font-size:28px;width:28px">2</span><div class="grow t">Elige <b>Añadir a pantalla de inicio</b> y pulsa Añadir</div></div>
+    <div class="item"><span class="big" style="font-size:28px;width:28px">3</span><div class="grow t">Abre <b>EaZy-Workout</b> desde el icono nuevo y configúrala allí</div></div>
+  </div>
+  <button class="btn wide" id="iosSkip" type="button" style="margin-top:20px">Seguir en Safari igualmente</button></div>`;
+  $("#iosSkip").onclick=()=>startOnboarding()}
