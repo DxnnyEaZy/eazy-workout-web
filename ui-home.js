@@ -19,7 +19,7 @@ function viewToday(){const now=new Date(),rs=todayList(now),w=planWeek(),main=rs
   const recent=sorted().slice(0,3);
   view().innerHTML=`<p class="lbl">${S.profile&&S.profile.name?`Hola, ${esc(S.profile.name)} · `:""}${now.toLocaleDateString("es-ES",{weekday:"long",day:"numeric",month:"long"})}</p>
   <h1>${main.length?"Hoy toca":"Hoy descansas"}</h1><p class="sub">${esc(planNote(w))}</p>
-  ${weekStrip()}${installHint()}
+  ${weekStrip()}${installHint()}${demoBanner()}
   ${blockOver()?`<div class="card" style="margin-top:16px"><p class="lbl">Plan terminado</p><p style="margin:6px 0 12px">Exporta tu resumen y empieza un plan nuevo desde Ajustes.</p><button class="btn wide" id="repNow" type="button">Exportar resumen</button></div>`:""}
   <div class="tiles" style="margin-top:20px">${main.map(r=>tileHTML(r,{hero:true,today:true})).join("")}${mob.map(r=>tileHTML(r,{today:true})).join("")}
     <button class="tile rise" id="otherR" type="button" style="--c:var(--accent)"><div class="pv"><span class="badge">Elegir</span>${POSE_GRID}</div><div class="nm"><b>Otra rutina</b><small>o una sesión libre</small></div></button></div>
@@ -27,7 +27,7 @@ function viewToday(){const now=new Date(),rs=todayList(now),w=planWeek(),main=rs
   view().querySelectorAll("[data-prev]").forEach(b=>b.onclick=()=>openPreview(b.dataset.prev));
   $("#otherR").onclick=()=>go("routines");
   const rn=$("#repNow");if(rn)rn.onclick=()=>shareText("Resumen EaZy-Workout",weeklyReport(42)).then(r=>r==="copied"&&toast("Informe copiado"));
-  bindSessRows();
+  bindSessRows();bindDemo();
 }
 const POSE_GRID=`<svg class="pose" viewBox="0 0 140 110" aria-hidden="true"><rect x="40" y="25" width="26" height="26" fill="none" stroke="currentColor" stroke-width="5"/><rect x="74" y="25" width="26" height="26" fill="none" stroke="currentColor" stroke-width="5"/><rect x="40" y="59" width="26" height="26" fill="none" stroke="currentColor" stroke-width="5"/><path d="M87 62v20M77 72h20" stroke-width="5"/></svg>`;
 function sessRow(s){const r=routineById(s.routineId),c=catColor(r||{items:s.items}),ex=(s.items[0]||{}).ex||"stand";
@@ -65,3 +65,8 @@ function viewRoutines(){const groups=["mob","str","run","box","ext"];
   $("#newR").onclick=()=>{const r={id:"r-"+uid(),name:"Nueva rutina",note:"",cat:"ext",items:[]};S.routines.push(r);save();openEditor(r.id)};
   $("#freeS").onclick=()=>startSession(null);
 }
+
+/* Borrar ejemplos de un toque */
+function demoBanner(){const n=S.sessions.filter(s=>s.demo).length;if(!n)return "";
+  return `<div class="card row" style="margin-top:16px"><div class="grow"><p class="lbl">Datos de ejemplo</p><p class="sub" style="font-size:13px">${n} sesiones de prueba mezcladas con las tuyas.</p></div><button class="btn sm" data-demodel type="button">Borrar</button></div>`}
+function bindDemo(){view().querySelectorAll("[data-demodel]").forEach(b=>b.onclick=()=>{S.sessions=S.sessions.filter(s=>!s.demo);save();render();toast("Sesiones de ejemplo borradas")})}

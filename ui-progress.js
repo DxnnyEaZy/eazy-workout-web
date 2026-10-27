@@ -58,14 +58,24 @@ function viewCalendar(){const now=new Date();if(!calM)calM=new Date(now.getFullY
   const byDay={};for(const s of S.sessions){const k=isoDay(s.start);(byDay[k]=byDay[k]||[]).push(catColor(routineById(s.routineId)||{items:s.items}))}
   const first=(new Date(y,m,1).getDay()+6)%7,len=new Date(y,m+1,0).getDate(),inM=sorted().filter(s=>{const d=new Date(s.start);return d.getFullYear()===y&&d.getMonth()===m});
   let c="";for(let i=0;i<first;i++)c+=`<div class="d out"></div>`;
-  for(let d=1;d<=len;d++){const k=isoDay(new Date(y,m,d)),cols=[...new Set(byDay[k]||[])];c+=`<div class="d ${isoDay(now)===k?"today":""}">${d}<span class="dots">${cols.map(x=>`<i style="--c:${x}"></i>`).join("")}</span></div>`}
+  for(let d=1;d<=len;d++){const k=isoDay(new Date(y,m,d)),cols=[...new Set(byDay[k]||[])];c+=`<button type="button" class="d tap ${isoDay(now)===k?"today":""}" data-cday="${k}" aria-label="${d}">${d}<span class="dots">${cols.map(x=>`<i style="--c:${x}"></i>`).join("")}</span></button>`}
   const mName=calM.toLocaleDateString("es-ES",{month:"long",year:"numeric"});
-  view().innerHTML=`<h1>Calendario</h1><p class="sub">Cada color es un tipo de entreno. La racha cuenta semanas seguidas con al menos un entreno.</p>
+  view().innerHTML=`<h1>Calendario</h1>${demoBanner()}<p class="sub" style="margin-top:8px">Toca un día para ver qué hiciste o qué toca. Cada color es un tipo de entreno. La racha cuenta semanas seguidas con al menos un entreno.</p>
   <div class="stats" style="margin-top:16px"><div class="stat" style="--c:var(--gold)"><div class="big">${streak()}</div><div class="lbl">semanas racha</div></div>
   <div class="stat" style="--c:var(--run)"><div class="big">${new Set(inM.filter(s=>!isMob(s)&&!s.demo).map(s=>isoDay(s.start))).size}</div><div class="lbl">días entreno</div></div>
-  <div class="stat" style="--c:var(--mob)"><div class="big">${new Set(inM.filter(s=>isMob(s)).map(s=>isoDay(s.start))).size}</div><div class="lbl">días lumbar</div></div></div>
+  <div class="stat" style="--c:var(--mob)"><div class="big">${new Set(inM.filter(s=>isMob(s)).map(s=>isoDay(s.start))).size}</div><div class="lbl">días movilidad</div></div></div>
   <div class="row" style="margin:24px 0 12px"><button class="btn sm" id="cP" type="button" aria-label="Mes anterior">‹</button><div class="grow" style="text-align:center;font:700 22px var(--disp);text-transform:uppercase">${mName}</div><button class="btn sm" id="cN" type="button" aria-label="Mes siguiente">›</button></div>
   <div class="cal">${["L","M","X","J","V","S","D"].map(h=>`<div class="h">${h}</div>`).join("")}${c}</div>
   <div class="legend">${Object.values(CATS).map(x=>`<span><i style="--c:${x.c}"></i>${x.n}</span>`).join("")}</div>
   <h2>Sesiones del mes</h2><div class="stack">${inM.map(sessRow).join("")||`<p class="sub">Ninguna este mes.</p>`}</div>`;
-  $("#cP").onclick=()=>{calM=new Date(y,m-1,1);viewCalendar()};$("#cN").onclick=()=>{calM=new Date(y,m+1,1);viewCalendar()};bindSessRows()}
+  view().querySelectorAll("[data-cday]").forEach(b=>b.onclick=()=>calDaySheet(b.dataset.cday));bindDemo();$("#cP").onclick=()=>{calM=new Date(y,m-1,1);viewCalendar()};$("#cN").onclick=()=>{calM=new Date(y,m+1,1);viewCalendar()};bindSessRows()}
+
+function calDaySheet(k){const d=new Date(k+"T12:00:00"),ss=S.sessions.filter(s=>isoDay(s.start)===k).sort((a,b)=>a.start-b.start),today=isoDay(new Date());
+  const plan=todayList(d),future=k>=today;
+  openSheet(`<p class="lbl">${d.toLocaleDateString("es-ES",{weekday:"long"})}</p><h3>${d.toLocaleDateString("es-ES",{day:"numeric",month:"long"})}</h3>
+  <span class="lbl" style="display:block;margin-top:14px">Hecho</span><div class="stack" style="margin-top:8px">${ss.map(s=>sessRow(s)).join("")||`<p class="sub">Nada registrado este día.</p>`}</div>
+  <span class="lbl" style="display:block;margin-top:16px">${future?"Toca":"Tocaba"}</span><div class="stack" style="margin-top:8px">${plan.map(r=>`<button class="tap item" data-cprev="${esc(r.id)}" type="button" style="--c:${catColor(r)}"><div class="thumb" style="width:52px;height:42px">${poseSVG((r.items[0]||{}).ex||"stand")}</div><div class="grow"><div class="t">${esc(r.name)}</div><div class="s">${CATS[catOf(r)].n}</div></div><span class="chev">→</span></button>`).join("")||`<p class="sub">Descanso.</p>`}</div>
+  <button class="btn wide" id="cdClose" type="button" style="margin-top:16px">Cerrar</button>`,()=>{
+    document.querySelectorAll("#sheetRoot [data-sess]").forEach(b=>b.onclick=()=>sessionSheet(b.dataset.sess));
+    document.querySelectorAll("#sheetRoot [data-cprev]").forEach(b=>b.onclick=()=>{closeSheet();openPreview(b.dataset.cprev)});
+    $("#cdClose").onclick=closeSheet})}

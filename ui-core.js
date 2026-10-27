@@ -42,6 +42,12 @@ function settingsSheet(){const st=S.settings,w=planWeek(),demoN=S.sessions.filte
   openSheet(`<h3>Ajustes</h3>
   <div class="stack" style="margin-top:16px">
     <button class="btn main" id="stFb" type="button" style="--c:#25D366"><span>Enviar sugerencia</span><span>→</span></button>
+    ${NATIVE?"":`<p class="note" style="margin-top:8px">En la versión web (iPhone) no hay avisos con el móvil bloqueado: los temporizadores suenan mientras tengas la app abierta.</p>`}
+    <div ${NATIVE?"":"hidden"} class="stack"><span class="lbl" style="margin-top:8px">Avisos de cada día</span><p class="sub" style="font-size:12px">A esta hora te avisa de lo que toca ese día.</p>
+    <div class="seg" id="segR" style="grid-template-columns:repeat(2,1fr)"><span class="slider" style="width:50%"></span>
+      <button type="button" data-r="1" class="${st.remindOn?"on":""}">Activados</button><button type="button" data-r="0" class="${st.remindOn?"":"on"}">Apagados</button></div>
+    <div class="row"><label class="f grow"><span class="lbl">Hora movilidad</span><input type="time" id="stMorning" value="${esc(st.morningTime)}"></label>
+      <label class="f grow"><span class="lbl">Hora entreno</span><input type="time" id="stRemind" value="${esc(st.remindTime)}"></label></div></div>
     <label class="f"><span class="lbl">Tu nombre</span><input id="stName" value="${esc(pr.name||"")}"></label>
     <span class="lbl">Molestias que vigilo</span>
     <div class="row" style="flex-wrap:wrap">${ZONE_OPTS.map(([k,n])=>`<button type="button" class="btn sm ${pr.zones.some(z=>z.id===k)?"on-z":""}" data-zone="${k}">${n}</button>`).join("")}</div>
@@ -51,12 +57,6 @@ function settingsSheet(){const st=S.settings,w=planWeek(),demoN=S.sessions.filte
     <p class="sub" style="font-size:12px">Auto calcula la semana desde el inicio del plan. Ahora mismo: S${w}.</p>
     <span class="lbl">Duración del plan</span><div class="row">${[4,5,6,8].map(n=>`<button type="button" class="btn sm grow ${planLen()===n?"on-z":""}" data-len="${n}">${n} sem</button>`).join("")}</div>
     <label class="f"><span class="lbl">Inicio del plan (lunes de la semana 1)</span><input type="date" id="stStart" value="${esc(st.planStart)}"></label>
-    ${NATIVE?"":`<p class="note" style="margin-top:8px">En la versión web (iPhone) no hay avisos con el móvil bloqueado: los temporizadores suenan mientras tengas la app abierta.</p>`}
-    <div ${NATIVE?"":"hidden"} class="stack"><span class="lbl" style="margin-top:8px">Recordatorios</span>
-    <div class="seg" id="segR" style="grid-template-columns:repeat(2,1fr)"><span class="slider" style="width:50%"></span>
-      <button type="button" data-r="1" class="${st.remindOn?"on":""}">Activados</button><button type="button" data-r="0" class="${st.remindOn?"":"on"}">Apagados</button></div>
-    <div class="row"><label class="f grow"><span class="lbl">Movilidad</span><input type="time" id="stMorning" value="${esc(st.morningTime)}"></label>
-      <label class="f grow"><span class="lbl">Entreno</span><input type="time" id="stRemind" value="${esc(st.remindTime)}"></label></div></div>
     <span class="lbl" style="margin-top:8px">Tus datos</span>
     <button class="btn wide" id="stReport" type="button">Exportar resumen semanal</button>
     <button class="btn wide" id="stExport" type="button">Exportar copia completa (.json)</button>
@@ -73,8 +73,8 @@ function settingsSheet(){const st=S.settings,w=planWeek(),demoN=S.sessions.filte
     seg("#segW","data-w",v=>{st.weekOverride=+v;save();render();scheduleReminders()});
     seg("#segR","data-r",v=>{st.remindOn=v==="1";save();scheduleReminders()});
     $("#stStart").onchange=e=>{if(e.target.value){st.planStart=isoDay(mondayOf(e.target.value+"T00:00:00"));save();render();scheduleReminders()}};
-    $("#stMorning").onchange=e=>{st.morningTime=e.target.value;save();scheduleReminders()};
-    $("#stRemind").onchange=e=>{st.remindTime=e.target.value;save();scheduleReminders()};
+    $("#stMorning").onchange=e=>{st.morningTime=e.target.value;save();scheduleReminders();toast("Aviso de movilidad a las "+e.target.value)};
+    $("#stRemind").onchange=e=>{st.remindTime=e.target.value;save();scheduleReminders();toast("Aviso de entreno a las "+e.target.value)};
     $("#stReport").onclick=async()=>{const r=await shareText("Resumen EaZy-Workout",weeklyReport(7));if(r==="copied")toast("Resumen copiado")};
     $("#stExport").onclick=async()=>{const r=await shareFile(`eazy-workout-${isoDay(new Date())}.json`,exportJSON());if(r==="copied")toast("Copia copiada al portapapeles")};
     $("#stImport").onclick=()=>$("#importFile").click();

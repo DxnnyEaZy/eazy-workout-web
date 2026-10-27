@@ -1,6 +1,6 @@
 "use strict";
 /* ===== Perfil, plantillas, objetivos y primer arranque (versión para amigos) ===== */
-const APP_VERSION="2.5";
+const APP_VERSION="2.6";
 /* ejercicios de gimnasio */
 [["press-banca","Press banca","Pecho","kg"],["press-militar","Press militar","Hombro","kg",1],["elev-lat","Elevaciones laterales","Hombro","kg"],
  ["fondos","Fondos en paralelas","Pecho","reps"],["ext-triceps","Extensión de tríceps","Con peso","kg"],["jalon","Jalón al pecho","Espalda","kg"],
