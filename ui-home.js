@@ -41,7 +41,7 @@ function viewPreview(rid){const r=routineById(rid);if(!r){back();return}const w=
   document.body.style.setProperty("--c",c);
   view().innerHTML=`${backBtn()}<div class="tile hero" style="--c:${c};cursor:default"><div class="pv"><span class="badge">${CATS[catOf(r)].n} · semana ${w} de ${planLen()}</span>${heroPose(r,its)}</div>
     <div class="nm"><b>${esc(r.name)}</b><small>${its.length?`${plural(its.length,"ejercicio")} · ${its.reduce((a,b)=>a+b.sets,0)} series`:"Esta semana no toca"}</small></div></div>
-  ${r.note?`<p class="note" style="margin-top:14px">${esc(r.note)}</p>`:""}
+  <p class="lbl" style="margin-top:12px">${NATIVE?(r.notifyOff?"Sin aviso":`Aviso a las ${esc(routineTime(r))}`):""}</p>${r.note?`<p class="note" style="margin-top:10px">${esc(r.note)}</p>`:""}
   ${isDani()&&w===5&&r.test?`<p class="note" style="margin-top:8px;color:var(--tx)">${esc(r.test)}</p>`:""}
   <div class="stack" style="margin-top:16px">${its.length?its.map(x=>{const e=exById(x.ex),T=TYPE[e.t],l=lastFor(x.ex);return `<div class="item rise"><div class="thumb">${poseSVG(x.ex)}</div>
     <div class="grow"><div class="t">${esc(e.n)}</div><div class="s" style="color:var(--c)">${x.ex==="test-partida"?"Trota hasta tener que parar":`${x.sets} × ${x.target} ${T.obj}`}${x.rest?` · ${x.ex==="test-partida"?"luego 5 min andando":x.rest+"s desc."}`:""}</div>

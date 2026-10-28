@@ -43,7 +43,7 @@ function settingsSheet(){const st=S.settings,w=planWeek(),demoN=S.sessions.filte
   <div class="stack" style="margin-top:16px">
     <button class="btn main" id="stFb" type="button" style="--c:#25D366"><span>Enviar sugerencia</span><span>→</span></button>
     ${NATIVE?"":`<p class="note" style="margin-top:8px">En la versión web (iPhone) no hay avisos con el móvil bloqueado: los temporizadores suenan mientras tengas la app abierta.</p>`}
-    <div ${NATIVE?"":"hidden"} class="stack"><span class="lbl" style="margin-top:8px">Avisos de cada día</span><p class="sub" style="font-size:12px">A esta hora te avisa de lo que toca ese día.</p>
+    <div ${NATIVE?"":"hidden"} class="stack"><span class="lbl" style="margin-top:8px">Avisos de cada día</span><p class="sub" style="font-size:12px">Horas por defecto. Cada rutina puede tener la suya en Rutinas → Editar.</p>
     <div class="seg" id="segR" style="grid-template-columns:repeat(2,1fr)"><span class="slider" style="width:50%"></span>
       <button type="button" data-r="1" class="${st.remindOn?"on":""}">Activados</button><button type="button" data-r="0" class="${st.remindOn?"":"on"}">Apagados</button></div>
     <div class="row"><label class="f grow"><span class="lbl">Hora movilidad</span><input type="time" id="stMorning" value="${esc(st.morningTime)}"></label>

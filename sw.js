@@ -1,5 +1,5 @@
 // Offline: guarda la app al instalarla y sirve primero desde caché; se actualiza al publicar una versión nueva.
-const V="eazy-workout-2.7-1793139986";
+const V="eazy-workout-2.8-1793215374";
 const FILES=["./","index.html","style.css","data.js","store.js","native.js","poses.js","profile.js","ui-core.js","ui-session.js","ui-home.js","ui-progress.js","ui-views.js",
  "fonts/inter-latin-400-normal.woff2","fonts/inter-latin-500-normal.woff2","fonts/jetbrains-mono-latin-400-normal.woff2","fonts/barlow-condensed-latin-900-italic.woff2","fonts/barlow-condensed-latin-700-normal.woff2","manifest.webmanifest","icons/icon-192.png"];
 self.addEventListener("install",e=>{e.waitUntil(caches.open(V).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting()))});

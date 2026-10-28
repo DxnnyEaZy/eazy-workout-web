@@ -13,8 +13,9 @@ async function kvSet(k,v){try{const p=Pref(),s=v==null?null:JSON.stringify(v);if
 let saveT=null;
 const snapshot=()=>({v:2,routines:S.routines,custom:S.custom,schedule:S.schedule,sessions:S.sessions,body:S.body,goals:S.goals,profile:S.profile,demoDone:S.demoDone,settings:S.settings});
 /* guardado inmediato (sin esperas): en web también a localStorage de forma síncrona, para no perder nada si se cierra la app */
-function save(){clearTimeout(saveT);const d=snapshot();try{if(!Pref())localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}saveT=setTimeout(()=>kvSet(KEY,d),0)}
-function flush(){try{const d=snapshot();if(!Pref())localStorage.setItem(KEY,JSON.stringify(d));else kvSet(KEY,d);if(active)kvSet(KEY_ACTIVE,active)}catch(e){}}
+let LOADED=false;
+function save(){if(!LOADED)return;clearTimeout(saveT);const d=snapshot();try{if(!Pref())localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}saveT=setTimeout(()=>kvSet(KEY,d),0)}
+function flush(){if(!LOADED)return;try{const d=snapshot();if(!Pref())localStorage.setItem(KEY,JSON.stringify(d));else kvSet(KEY,d);if(active)kvSet(KEY_ACTIVE,active)}catch(e){}}
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")flush()});window.addEventListener("pagehide",flush);
 function saveActive(){kvSet(KEY_ACTIVE,active)}
 function mondayOf(d){const x=new Date(d);x.setHours(0,0,0,0);x.setDate(x.getDate()-((x.getDay()+6)%7));return x}
@@ -25,7 +26,7 @@ async function load(){const d=await kvGet(KEY);
   else{S.routines=[];S.schedule={0:[],1:[],2:[],3:[],4:[],5:[],6:[]}}
   if(!S.settings.planStart)S.settings.planStart=isoDay(mondayOf(new Date()));
   active=await kvGet(KEY_ACTIVE);
-  save();
+  LOADED=true;save();
 }
 
 /* ===== Plan ===== */

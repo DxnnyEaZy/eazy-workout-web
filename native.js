@@ -16,14 +16,16 @@ async function scheduleTimerNotif(sec,title,body){const LN=P("LocalNotifications
 async function cancelTimerNotif(){const LN=P("LocalNotifications");if(!LN)return;try{await LN.cancel({notifications:[{id:ID.timer}]})}catch(e){}}
 const atTime=(d,hhmm)=>{const [h,m]=String(hhmm||"18:30").split(":").map(Number);const x=new Date(d);x.setHours(h||0,m||0,0,0);return x};
 /* Recordatorios de los próximos 14 días según la semana y el plan */
+/* hora del aviso de cada rutina: la suya propia o la general */
+const routineTime=r=>r.notifyTime||(r.mobility?S.settings.morningTime:S.settings.remindTime);
 async function scheduleReminders(){const LN=P("LocalNotifications");if(!LN)return;
-  try{const ids=Array.from({length:40},(_,i)=>({id:ID.remind+i}));await LN.cancel({notifications:ids});if(!S.settings.remindOn)return;
+  try{const ids=Array.from({length:80},(_,i)=>({id:ID.remind+i}));await LN.cancel({notifications:ids});if(!S.settings.remindOn)return;
     const list=[];let k=0;const now=new Date();
-    for(let i=0;i<14&&k<40;i++){const d=new Date();d.setDate(now.getDate()+i);const rs=todayList(d);
-      const mob=rs.filter(r=>r.mobility),main=rs.filter(r=>!r.mobility);
-      const tm=atTime(d,S.settings.morningTime),tr=atTime(d,S.settings.remindTime);
-      if(mob.length&&tm>now)list.push({id:ID.remind+k++,title:mob[0].name,body:"10 minutos de movilidad para empezar el día.",channelId:"remind",schedule:{at:tm,allowWhileIdle:true},smallIcon:"ic_stat_diario",iconColor:"#7F93A3"});
-      if(main.length&&tr>now)list.push({id:ID.remind+k++,title:`Hoy toca: ${main.map(r=>r.name).join(" + ")}`,body:"Abre EaZy-Workout para ver la sesión de esta semana.",channelId:"remind",schedule:{at:tr,allowWhileIdle:true},smallIcon:"ic_stat_diario",iconColor:"#7F93A3"})}
+    for(let i=0;i<14&&k<80;i++){const d=new Date();d.setDate(now.getDate()+i);
+      const slots={};for(const r of todayList(d)){if(r.notifyOff)continue;const t=routineTime(r);(slots[t]=slots[t]||[]).push(r)}
+      for(const [t,rs] of Object.entries(slots)){const at=atTime(d,t);if(at<=now||k>=80)continue;const mobOnly=rs.every(r=>r.mobility);
+        list.push({id:ID.remind+k++,title:mobOnly?rs.map(r=>r.name).join(" + "):`Toca: ${rs.map(r=>r.name).join(" + ")}`,
+          body:mobOnly?"10 minutos de movilidad para empezar el día.":"Abre EaZy-Workout para ver la sesión de esta semana.",channelId:"remind",schedule:{at,allowWhileIdle:true},smallIcon:"ic_stat_diario",iconColor:"#7F93A3"})}}
     if(list.length)await LN.schedule({notifications:list})}catch(e){console.warn(e)}}
 async function remindLater(r,when){const LN=P("LocalNotifications");if(!LN)return false;
   try{await LN.schedule({notifications:[{id:ID.later+Math.floor(Math.random()*900),title:`Toca ${r.name}`,body:"Lo dejaste para ahora. Abre EaZy-Workout y empieza.",channelId:"remind",schedule:{at:when,allowWhileIdle:true},smallIcon:"ic_stat_diario",iconColor:"#7F93A3"}]});return true}catch(e){return false}}

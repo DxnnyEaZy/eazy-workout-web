@@ -21,6 +21,10 @@ function openEditor(rid){push({render:()=>viewEditor(rid)})}
 function viewEditor(rid){const r=routineById(rid);if(!r){back();return}
   view().innerHTML=`${backBtn()}<p class="lbl">Editar rutina</p>
   <div class="stack" style="margin-top:8px"><label class="f"><span class="lbl">Nombre</span><input id="edN" value="${esc(r.name)}"></label>
+  <div class="stack" ${NATIVE?"":"hidden"}><span class="lbl">Aviso de esta rutina</span>
+  <div class="row"><input type="time" id="edTime" class="grow" value="${esc(routineTime(r))}" ${r.notifyOff?"disabled":""}>
+    <button class="btn sm ${r.notifyOff?"on-z":""}" id="edOff" type="button">${r.notifyOff?"Sin aviso":"Quitar aviso"}</button></div>
+  <p class="sub" style="font-size:12px;margin-top:-2px">${r.notifyOff?"Esta rutina no avisa.":r.notifyTime?`Hora propia. <button class="btn sm" id="edTimeReset" type="button" style="min-height:28px;padding:0 8px;margin-left:4px">Usar la general (${esc(r.mobility?S.settings.morningTime:S.settings.remindTime)})</button>`:"Usa la hora general de Ajustes. Cámbiala aquí para darle una propia."}</p></div>
   <label class="f"><span class="lbl">Notas</span><textarea id="edNote">${esc(r.note||"")}</textarea></label>
   <span class="lbl">Color</span><div class="swatches" id="edSw">${SWATCHES.map(c=>`<button type="button" data-c="${c}" style="--c:${c}" class="${catColor(r)===c?"on":""}" aria-label="Color ${c}"></button>`).join("")}</div>
   <label class="f"><span class="lbl">Tipo</span><select id="edCat">${Object.entries(CATS).map(([k,v])=>`<option value="${k}" ${catOf(r)===k?"selected":""}>${v.n}</option>`).join("")}</select></label></div>
@@ -36,7 +40,10 @@ function viewEditor(rid){const r=routineById(rid);if(!r){back();return}
   <div class="stack" style="margin-top:16px"><button class="btn wide" id="edAdd" type="button">Añadir ejercicio</button>
   <div class="row"><button class="btn grow" id="edDup" type="button">Duplicar</button><button class="btn danger grow" id="edDel" type="button">Borrar</button></div></div>`;
   bindBack();
-  $("#edN").onchange=e=>{r.name=e.target.value.trim()||r.name;save()};$("#edNote").onchange=e=>{r.note=e.target.value;save()};view().querySelectorAll("#edSw [data-c]").forEach(b=>b.onclick=()=>{r.color=b.dataset.c;save();view().querySelectorAll("#edSw [data-c]").forEach(x=>x.classList.toggle("on",x===b));toast("Color guardado")});$("#edCat").onchange=e=>{r.cat=e.target.value;r.mobility=e.target.value==="mob";save()};
+  $("#edN").onchange=e=>{r.name=e.target.value.trim()||r.name;save()};$("#edNote").onchange=e=>{r.note=e.target.value;save()};
+  $("#edTime").onchange=e=>{if(!e.target.value)return;r.notifyTime=e.target.value;save();scheduleReminders();toast(`${r.name} avisará a las ${e.target.value}`);viewEditor(rid)};
+  $("#edOff").onclick=()=>{r.notifyOff=!r.notifyOff;save();scheduleReminders();toast(r.notifyOff?"Aviso quitado":"Aviso activado");viewEditor(rid)};
+  const tr=$("#edTimeReset");if(tr)tr.onclick=()=>{delete r.notifyTime;save();scheduleReminders();viewEditor(rid)};view().querySelectorAll("#edSw [data-c]").forEach(b=>b.onclick=()=>{r.color=b.dataset.c;save();view().querySelectorAll("#edSw [data-c]").forEach(x=>x.classList.toggle("on",x===b));toast("Color guardado")});$("#edCat").onchange=e=>{r.cat=e.target.value;r.mobility=e.target.value==="mob";save()};
   view().querySelectorAll(".card[data-ix]").forEach(c=>{const ix=+c.dataset.ix,x=r.items[ix];
     c.querySelectorAll("[data-k]").forEach(i=>i.onchange=()=>{x[i.dataset.k]=Math.max(0,num(i.value));if(i.dataset.k==="sets")x.sets=Math.max(1,Math.round(x.sets));save()});
     c.querySelector("[data-up]").onclick=()=>{[r.items[ix-1],r.items[ix]]=[r.items[ix],r.items[ix-1]];save();viewEditor(rid)};
