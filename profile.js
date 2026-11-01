@@ -1,6 +1,6 @@
 "use strict";
 /* ===== Perfil, plantillas, objetivos y primer arranque (versión para amigos) ===== */
-const APP_VERSION="2.10.4"; /* ÚNICO sitio con la versión: build.gradle la lee de aquí (versionName y versionCode) */
+const APP_VERSION="2.10.5"; /* ÚNICO sitio con la versión: build.gradle la lee de aquí (versionName y versionCode) */
 /* ejercicios de gimnasio */
 [["press-banca","Press banca","Pecho","kg"],["press-militar","Press militar","Hombro","kg",1],["elev-lat","Elevaciones laterales","Hombro","kg"],
  ["fondos","Fondos en paralelas","Pecho","reps"],["ext-triceps","Extensión de tríceps","Con peso","kg"],["jalon","Jalón al pecho","Espalda","kg"],
@@ -31,7 +31,7 @@ function planNote(w){if(isDani())return PLAN_NOTES[w]||"";if(w%4===0)return "Des
 const INC={reps:1,time:5,run:1,rounds:0,kg:0};
 function autoWeek(it,w){if(isDani())return null;const t=exById(it.ex).t,cyc=w-1-Math.floor((w-1)/4);
   if(w%4===0)return {sets:Math.max(1,it.sets-1),target:it.target,kg:it.kg};
-  return {sets:it.sets,target:it.target+INC[t]*cyc,kg:t==="kg"?(it.kg||0)+2.5*cyc:it.kg}}
+  return {sets:it.sets,target:it.target+INC[t]*cyc,kg:it.kg}}
 const zoneVal=(f,id)=>f?(f.zones&&f.zones[id]!=null?f.zones[id]:f[id]):null;
 
 /* ===== Generar plan desde el perfil ===== */

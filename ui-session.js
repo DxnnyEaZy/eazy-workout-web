@@ -4,9 +4,15 @@ function startSession(rid){const r=rid&&routineById(rid),w=planWeek();
   active={id:uid(),routineId:rid||"",name:r?r.name:"Sesión libre",note:r?r.note:"",week:w,start:Date.now(),
     items:r?routineItems(r,w).map(x=>newItem(x.ex,x.sets,x.target,x.kg,x.rest)):[]};
   saveActive();keepAwake();stack.length=0;tab="today";render();window.scrollTo(0,0)}
-function newItem(ex,sets,target,kg,rest){const t=exById(ex).t,last=lastFor(ex);
+/* gimnasio (2.10.5): si la última vez llegaste a las reps objetivo en todas las series con el peso más alto, sube;
+   +2,5 kg desde 20 kg, +1 kg por debajo (mancuernas ligeras). Si no llegaste, mismo peso. */
+const kgStep=kg=>kg>=20?2.5:1;
+function suggestKg(ex,target){const l=lastFor(ex);if(!l||!l.sets.length)return null;const top=Math.max(...l.sets.map(z=>num(z.a)));if(!(top>0))return null;
+  const atTop=l.sets.filter(z=>num(z.a)===top),hit=target>0&&atTop.length===l.sets.length&&atTop.every(z=>num(z.b)>=target);
+  return {kg:hit?Math.round((top+kgStep(top))*10)/10:top,up:hit,from:top}}
+function newItem(ex,sets,target,kg,rest){const t=exById(ex).t,last=lastFor(ex),sg=t==="kg"?suggestKg(ex,target):null;
   return {ex,rest:rest??60,target:target||0,sets:Array.from({length:sets||3},(_,i)=>{const p=last&&last.sets[Math.min(i,last.sets.length-1)];
-    if(t==="kg")return {a:p?p.a:(kg||0),b:p?p.b:(target||10),done:false};
+    if(t==="kg")return {a:sg?sg.kg:(kg||0),b:target||(p?p.b:10),done:false};
     if(t==="run")return {a:target||(p?p.a:4),b:"",done:false};
     if(t==="time"||t==="rounds")return {a:target||(p?p.a:30),done:false};
     return {a:p?Math.max(num(p.a),0):(target||10),done:false}})}}
@@ -27,7 +33,7 @@ function updateCount(){const all=active.items.flatMap(i=>i.sets),d=all.filter(s=
 function exCard(it,ix){const e=exById(it.ex),T=TYPE[e.t],last=lastFor(it.ex,active.id),two=!!T.b,timed=T.timed;
   const cls=timed?(two?"timed timed2":"timed"):two?"":"one";
   return `<div class="ex rise" data-ix="${ix}"><div class="ex-h"><div class="thumb">${poseSVG(it.ex)}</div><div class="grow"><div class="n">${esc(e.n)}</div>
-    ${it.ex==="test-partida"?`<div class="obj">Pulsa ▶, trota a ritmo conversacional y pulsa Parar cuando tengas que andar</div>`:it.target?`<div class="obj">Objetivo ${it.sets.length}×${it.target} ${T.obj}</div>`:""}
+    ${it.ex==="test-partida"?`<div class="obj">Pulsa ▶, trota a ritmo conversacional y pulsa Parar cuando tengas que andar</div>`:it.target?`<div class="obj">Objetivo ${it.sets.length}×${it.target} ${T.obj}${e.t==="kg"&&it.sets[0]&&num(it.sets[0].a)>0?` · ${it.sets[0].a} kg`:""}</div>${e.t==="kg"&&(()=>{const sg=suggestKg(it.ex,it.target);return sg&&sg.up?`<div class="obj" style="color:var(--good)">Sube a ${sg.kg} kg: la última vez hiciste todas las series</div>`:""})()||""}`:""}
     <div class="last">${last?`Última (${fmtDate(last.date)}): ${last.sets.map(z=>fmtSet(e.t,z)).join(" · ")}`:"Primera vez"}</div></div>
     <div class="stack" style="align-items:flex-end;gap:4px">${e.lumbar?`<span class="tag warn">Lumbar</span>`:""}${it.rest?`<span class="tag">${it.rest}s desc.</span>`:""}</div></div>
     ${it.sets.map((s,si)=>`<div class="set ${cls} ${s.done?"done":""}" data-si="${si}"><span class="i">${si+1}</span>
