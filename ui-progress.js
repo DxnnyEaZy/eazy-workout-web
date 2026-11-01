@@ -5,7 +5,7 @@ function goalData(){const col={run:"var(--run)",routine:"var(--str)"};return S.g
   const c=g.kind==="ex"?catColor({items:[{ex:g.ex}],cat:{Cardio:"run",Boxeo:"box",Movilidad:"mob"}[exById(g.ex).g]||"str"}):col[g.kind];
   return {id:g.id,n:g.n,v,max:g.target,u:g.unit,c,txt:g.kind==="routine"?`${v} % del volumen de la semana ${g.week}`:`${v} / ${g.target} ${g.unit}`,pct:g.kind==="routine"}})}
 function goalHTML(g){const p=Math.min(100,g.v/g.max*100);g.max=g.pct?1:g.max;return `<div class="goal rise" style="--c:${g.c}"><div class="top"><span class="lbl grow" style="color:var(--tx)">${g.n}</span>
-  <span class="big" style="font-size:30px;color:var(--c)">${g.pct?Math.round(p)+"%":g.v}</span>${g.pct?"":`<span class="lbl">/ ${g.max} ${esc(g.u)}</span>`}<button class="btn sm" data-gdel="${g.id}" type="button" aria-label="Quitar objetivo" style="min-height:28px;padding:0 8px">×</button></div>
+  <span class="big" style="font-size:30px;color:var(--c)">${g.pct?Math.round(p)+"%":g.v}</span>${g.pct?"":`<span class="lbl">/ ${g.max} ${esc(g.u)}</span>`}<button class="btn sm" data-gdel="${g.id}" type="button" aria-label="Quitar objetivo" style="min-width:48px;padding:0 8px">×</button></div>
   <div class="meter"><b style="width:${p}%"></b><i style="left:calc(100% - 2px)"></i></div><p class="s mono" style="font-size:11px;color:var(--mut);margin-top:6px">${g.txt}</p></div>`}
 function weekSummary(){const mon=mondayOf(new Date());let plan=0;for(let i=0;i<7;i++){const d=new Date(mon);d.setDate(mon.getDate()+i);plan+=todayList(d).filter(r=>!r.mobility).length}
   const ss=real().filter(s=>s.start>=mon.getTime()),main=ss.filter(s=>!isMob(s)),mins=Math.round(ss.reduce((a,s)=>a+(s.end-s.start),0)/60000);

@@ -242,3 +242,18 @@ body.fs-on{overflow:hidden}
 .chips7 b{font:700 22px var(--disp)}
 .btn.on{background:var(--tx);color:var(--bg);border-color:var(--tx)}
 .btn.ghost{background:none;border-color:transparent;color:var(--mut);text-decoration:underline}
+
+/* 2.10.3 · una mano y sudando: nada que se use por debajo de 48 px, etiquetas legibles */
+.lbl{font-size:13px;line-height:18px}
+.navbtn{font-size:12px}
+.btn.sm{min-height:48px;padding:0 14px;font-size:14px}
+.iconbtn{width:48px;height:48px}
+.scale{grid-template-columns:repeat(6,1fr);gap:4px}
+.scale button{min-height:52px;font-size:22px}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.days button{appearance:none;min-height:56px;border:1px solid var(--line2);background:var(--bg3);color:var(--tx);font:500 15px var(--sans);cursor:pointer}
+.days button.on{background:var(--snow);color:var(--graphite);border-color:var(--snow)}
+.big3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.big3 .btn{min-height:96px;flex-direction:column;gap:4px;font-size:16px}
+.big3 .btn b{font:900 italic 38px/1 var(--disp)}
+.brand .lbl,.wkpill .lbl{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

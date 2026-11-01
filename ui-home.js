@@ -49,11 +49,12 @@ function viewPreview(rid,day){const r=routineById(rid);if(!r){back();return}cons
     <div class="nm"><b>${esc(r.name)}</b><small>${its.length?`${plural(its.length,"ejercicio")} · ${its.reduce((a,b)=>a+b.sets,0)} series`:"Esta semana no toca"}</small></div></div>
   <p class="lbl" style="margin-top:12px">${NATIVE?(r.notifyOff?"Sin aviso":`Aviso a las ${esc(routineTime(r))}`):""}</p>${r.note?`<p class="note" style="margin-top:10px">${esc(r.note)}</p>`:""}
   ${isDani()&&w===5&&r.test?`<p class="note" style="margin-top:8px;color:var(--tx)">${esc(r.test)}</p>`:""}
+  <div class="stack" style="margin-top:16px"><button class="btn main" id="pvStart" type="button"><span>Empezar ahora</span><span>→</span></button>
+  <div class="row"><button class="btn grow" id="pvLater" type="button">Recordármelo</button>${canMove?`<button class="btn grow" id="pvMove" type="button">Mover a…</button>`:""}<button class="btn grow" id="pvEdit" type="button">Editar</button></div></div>
   <div class="stack" style="margin-top:16px">${its.length?its.map(x=>{const e=exById(x.ex),T=TYPE[e.t],l=lastFor(x.ex);return `<div class="item rise"><div class="thumb">${poseSVG(x.ex)}</div>
     <div class="grow"><div class="t">${esc(e.n)}</div><div class="s" style="color:var(--c)">${x.ex==="test-partida"?"Trota hasta tener que parar":`${x.sets} × ${x.target} ${T.obj}`}${x.rest?` · ${x.ex==="test-partida"?"luego 5 min andando":x.rest+"s desc."}`:""}</div>
     ${l?`<div class="s">Última: ${l.sets.map(z=>fmtSet(e.t,z)).join(" · ")}</div>`:""}</div>${e.lumbar?`<span class="tag warn">Lumbar</span>`:""}</div>`}).join(""):`<p class="sub">Esta semana esta rutina no toca. Puedes empezarla igualmente con los valores base.</p>`}</div>
-  <div class="stack" style="margin-top:20px"><button class="btn main" id="pvStart" type="button"><span>Empezar ahora</span><span>→</span></button>
-  <div class="row"><button class="btn grow" id="pvLater" type="button">Recordármelo</button>${canMove?`<button class="btn grow" id="pvMove" type="button">Mover a…</button>`:""}<button class="btn grow" id="pvEdit" type="button">Editar</button></div></div>`;
+`;
   bindBack();
   $("#pvStart").onclick=e=>{e.currentTarget.classList.add("wipe");setTimeout(()=>{if(its.length)startSession(rid);else startBase(r)},220)};
   $("#pvEdit").onclick=()=>openEditor(rid);$("#pvLater").onclick=()=>laterSheet(r);if($("#pvMove"))$("#pvMove").onclick=()=>moveSheet(rid,day,true);

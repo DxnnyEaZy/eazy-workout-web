@@ -36,14 +36,14 @@ function exCard(it,ix){const e=exById(it.ex),T=TYPE[e.t],last=lastFor(it.ex,acti
       ${timed?`<button class="play" data-play type="button" aria-label="Iniciar cuenta atrás">${ICON.play}</button>`:""}
       <button class="check" data-done type="button" aria-label="Marcar serie ${si+1}">${ICON.check}</button></div>`).join("")}
     <div class="ex-f"><button class="btn sm" data-add type="button">+ Serie</button><button class="btn sm" data-rm type="button">− Serie</button><span class="grow"></span><button class="btn sm" data-del type="button">Quitar</button></div></div>`}
-function markDone(it,s,row,on){s.done=on;row.classList.toggle("done",on);saveActive();updateCount();
+function markDone(it,s,row,on){s.done=on;row.classList.toggle("done",on);saveActive();updateCount();if(on)scrollNext(row);
   if(on){haptic();const next=nextLabel(it);if(it.rest&&next)tmStart([{k:"r",sec:it.rest,lbl:"Descanso",nx:next}],false)}}
 function nextLabel(it){const i=active.items.indexOf(it),rest=it.sets.some(s=>!s.done);if(rest)return exById(it.ex).n;const n=active.items.slice(i+1).find(x=>x.sets.some(z=>!z.done));return n?exById(n.ex).n:""}
 function bindSession(){
   $("#elapsed")&&0;
   view().querySelectorAll(".ex").forEach(card=>{const ix=+card.dataset.ix,it=active.items[ix],e=exById(it.ex);
     card.querySelectorAll(".set").forEach(row=>{const si=+row.dataset.si,s=it.sets[si];
-      row.querySelectorAll("input").forEach(inp=>inp.onchange=()=>{s[inp.dataset.f]=inp.value;saveActive()});
+      row.querySelectorAll("input").forEach(inp=>{inp.oninput=()=>{s[inp.dataset.f]=inp.value;saveActive()};inp.onfocus=()=>setTimeout(()=>inp.select(),0)});
       row.querySelector("[data-done]").onclick=()=>{unlockAudio();markDone(it,s,row,!s.done)};
       const pl=row.querySelector("[data-play]");if(pl&&it.ex==="test-partida")pl.onclick=()=>startStopwatch(ix,si);
         else if(pl)pl.onclick=()=>{if(!(TYPE[e.t].sec(num(s.a))>0)){toast("Pon la duración primero");return}tmStart(buildChain(ix,si),true)}});
@@ -54,6 +54,10 @@ function bindSession(){
   $("#finish").onclick=finishFlow;
   $("#discard").onclick=()=>confirmSheet("¿Descartar la sesión?","No se guardará nada de este entreno.","Descartar",()=>{stopTimer();active=null;saveActive();allowSleep();render()});
 }
+
+/* una mano (2.10.3): tras marcar una serie, la siguiente pendiente queda a la vista sin hacer scroll */
+function scrollNext(row){const rows=[...view().querySelectorAll(".set")],i=rows.indexOf(row),n=rows.slice(i+1).find(x=>!x.classList.contains("done"));
+  if(n){const rc=n.getBoundingClientRect(),limit=window.innerHeight-(document.body.classList.contains("timer-on")?260:150);if(rc.bottom>limit)window.scrollBy({top:rc.bottom-limit+40,behavior:"smooth"})}}
 
 /* ===== Temporizador (2.10.1): pasos encadenados, guardados en la sesión =====
    active.tm = {fs, steps:[{k:"w"|"r",ix,si,sec,lbl,nx}], i, end, paused} · o {fs:true,up:true,start,ix,si} para el cronómetro.
@@ -123,6 +127,12 @@ function holdBtn(el,fn){let h=null;const off=()=>{clearTimeout(h);h=null;el.clas
 /* ===== Terminar: sensaciones y resumen ===== */
 function scaleHTML(id,from,val){return `<div class="scale" id="${id}">${Array.from({length:11},(_,i)=>i).filter(i=>i>=from).map(i=>`<button type="button" data-v="${i}" class="${val===i?"on":""}">${i}</button>`).join("")}</div>`}
 function finishFlow(){const done=active.items.some(i=>i.sets.some(s=>s.done));if(!done){toast("Marca al menos una serie antes de terminar");return}
+  const r=routineById(active.routineId);if(r&&r.mobility)return quickFinish();fullFinish()}
+/* movilidad (2.10.3): un toque guarda; «Más detalle» abre las escalas */
+function quickFinish(){openSheet(`<h3>¿Qué tal?</h3><div class="big3" style="margin-top:16px">${[["mal","Mal","☹"],["normal","Normal","–"],["bien","Bien","☺"]].map(([k,n,ic])=>`<button class="btn" type="button" data-mood="${k}"><b>${ic}</b>${n}</button>`).join("")}</div>
+  <button class="btn wide ghost" id="fMore" type="button" style="margin-top:8px">Más detalle (molestias, nota)</button>`,()=>{
+  document.querySelectorAll("#sheetRoot [data-mood]").forEach(b=>b.onclick=()=>saveSession({rpe:null,zones:{},note:"",mood:b.dataset.mood}));$("#fMore").onclick=fullFinish})}
+function fullFinish(){
   const f={rpe:null,zones:{},note:""},Z=(S.profile&&S.profile.zones)||[];
   openSheet(`<h3>¿Cómo ha ido?</h3><p class="sub">Esto va en el informe semanal para ajustar el plan.</p>
   <div class="stack" style="margin-top:16px"><span class="lbl">Sensación general (1 muy fácil · 10 al límite)</span>${scaleHTML("fRpe",1,null)}

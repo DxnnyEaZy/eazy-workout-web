@@ -115,7 +115,7 @@ function weeklyReport(days=7){const from=Date.now()-days*864e5,w=planWeek(),ss=r
   L.push("Plan vs hecho:",...plan,"");
   for(const s of ss){L.push(`${new Date(s.start).toLocaleDateString("es-ES",{weekday:"short",day:"numeric",month:"short"})} · ${s.name} · ${Math.round((s.end-s.start)/60000)} min`);
     for(const i of s.items){const e=exById(i.ex);L.push(`  - ${e.n}: ${i.sets.filter(z=>z.done).map(z=>fmtSet(e.t,z)).join(", ")}`)}
-    if(s.feel)L.push(`  Sensación ${s.feel.rpe??"-"}/10${((S.profile&&S.profile.zones)||[]).map(z=>` · ${z.n} ${zoneVal(s.feel,z.id)??"-"}/10`).join("")}${s.feel.note?` · Nota: ${s.feel.note}`:""}`)}
+    if(s.feel)L.push(s.feel.mood?`  Sensación: ${s.feel.mood}`:`  Sensación ${s.feel.rpe??"-"}/10${((S.profile&&S.profile.zones)||[]).map(z=>` · ${z.n} ${zoneVal(s.feel,z.id)??"-"}/10`).join("")}${s.feel.note?` · Nota: ${s.feel.note}`:""}`)}
   const pr=prMap(),newPr=Object.entries(pr).filter(([,p])=>p.date>=from).map(([id,p])=>`${exById(id).n} ${p.v} ${TYPE[exById(id).t].best}`);
   const bw=S.body.slice().sort((a,b)=>a.t-b.t);if(bw.length)L.push("",`Peso: ${bw.slice(-4).map(x=>`${x.kg} kg (${new Date(x.t).toLocaleDateString("es-ES",{day:"numeric",month:"short"})})`).join(" → ")}`);
   L.push("",`Récords nuevos: ${newPr.length?newPr.join("; "):"ninguno"}`,`Racha: ${streak()} semanas`);
