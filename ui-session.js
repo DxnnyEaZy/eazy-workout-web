@@ -21,7 +21,7 @@ function viewSession(){const a=active;document.body.style.setProperty("--c",sess
   <div class="stack" style="margin-top:16px"><button class="btn wide" id="addEx" type="button">Añadir ejercicio</button>
   <button class="btn main" id="finish" type="button"><span>Terminar entreno</span><span>→</span></button>
   <button class="btn danger wide" id="discard" type="button">Descartar sesión</button></div>`;
-  bindSession();updateCount();
+  bindSession();updateCount();if(tmS()&&!TM_INT)tmLoop();
 }
 function updateCount(){const all=active.items.flatMap(i=>i.sets),d=all.filter(s=>s.done).length;const el=$("#setCount");if(el)el.textContent=`${d}/${all.length} series`;const tl=$("#tl");if(tl)tl.innerHTML=timelineHTML()}
 function exCard(it,ix){const e=exById(it.ex),T=TYPE[e.t],last=lastFor(it.ex,active.id),two=!!T.b,timed=T.timed;
@@ -37,43 +37,88 @@ function exCard(it,ix){const e=exById(it.ex),T=TYPE[e.t],last=lastFor(it.ex,acti
       <button class="check" data-done type="button" aria-label="Marcar serie ${si+1}">${ICON.check}</button></div>`).join("")}
     <div class="ex-f"><button class="btn sm" data-add type="button">+ Serie</button><button class="btn sm" data-rm type="button">− Serie</button><span class="grow"></span><button class="btn sm" data-del type="button">Quitar</button></div></div>`}
 function markDone(it,s,row,on){s.done=on;row.classList.toggle("done",on);saveActive();updateCount();
-  if(on){haptic();if(it.rest){const next=nextLabel(it);startTimer("rest",it.rest,`Descanso · ${next}`)}}}
-function nextLabel(it){const i=active.items.indexOf(it),rest=it.sets.some(s=>!s.done);if(rest)return exById(it.ex).n;const n=active.items[i+1];return n?exById(n.ex).n:"última serie"}
+  if(on){haptic();const next=nextLabel(it);if(it.rest&&next)tmStart([{k:"r",sec:it.rest,lbl:"Descanso",nx:next}],false)}}
+function nextLabel(it){const i=active.items.indexOf(it),rest=it.sets.some(s=>!s.done);if(rest)return exById(it.ex).n;const n=active.items.slice(i+1).find(x=>x.sets.some(z=>!z.done));return n?exById(n.ex).n:""}
 function bindSession(){
   $("#elapsed")&&0;
   view().querySelectorAll(".ex").forEach(card=>{const ix=+card.dataset.ix,it=active.items[ix],e=exById(it.ex);
     card.querySelectorAll(".set").forEach(row=>{const si=+row.dataset.si,s=it.sets[si];
       row.querySelectorAll("input").forEach(inp=>inp.onchange=()=>{s[inp.dataset.f]=inp.value;saveActive()});
       row.querySelector("[data-done]").onclick=()=>{unlockAudio();markDone(it,s,row,!s.done)};
-      const pl=row.querySelector("[data-play]");if(pl&&it.ex==="test-partida")pl.onclick=()=>{unlockAudio();startStopwatch(`${e.n}`,min=>{if(!active)return;s.a=min;const inp=row.querySelector("input");if(inp)inp.value=min;markDone(it,s,row,true)})};else if(pl)pl.onclick=()=>{unlockAudio();const sec=TYPE[e.t].sec(num(s.a));if(!sec){toast("Pon la duración primero");return}
-        startTimer("work",sec,`${e.n} · serie ${si+1}`,()=>{const r2=view().querySelector(`.ex[data-ix="${ix}"] .set[data-si="${si}"]`);if(r2)markDone(it,s,r2,true);else{s.done=true;saveActive()}})}});
+      const pl=row.querySelector("[data-play]");if(pl&&it.ex==="test-partida")pl.onclick=()=>startStopwatch(ix,si);
+        else if(pl)pl.onclick=()=>{if(!(TYPE[e.t].sec(num(s.a))>0)){toast("Pon la duración primero");return}tmStart(buildChain(ix,si),true)}});
     card.querySelector("[data-add]").onclick=()=>{const l=it.sets[it.sets.length-1]||{a:it.target||0,b:""};it.sets.push({a:l.a,b:l.b,done:false});saveActive();viewSession()};
     card.querySelector("[data-rm]").onclick=()=>{const i=it.sets.map(s=>s.done).lastIndexOf(false);if(i<0||it.sets.length<2){toast("No quedan series sin hacer que quitar");return}it.sets.splice(i,1);saveActive();viewSession()};
     card.querySelector("[data-del]").onclick=()=>confirmSheet(`¿Quitar ${e.n}?`,it.sets.some(s=>s.done)?"Tiene series hechas; se perderán de esta sesión.":"Se quita solo de esta sesión.","Quitar",()=>{active.items.splice(ix,1);saveActive();viewSession()})});
   $("#addEx").onclick=()=>picker(ex=>{active.items.push(newItem(ex,3,0,0,60));saveActive();viewSession()});
   $("#finish").onclick=finishFlow;
-  $("#discard").onclick=()=>confirmSheet("¿Descartar la sesión?","No se guardará nada de este entreno.","Descartar",()=>{active=null;saveActive();stopTimer();render()});
+  $("#discard").onclick=()=>confirmSheet("¿Descartar la sesión?","No se guardará nada de este entreno.","Descartar",()=>{stopTimer();active=null;saveActive();allowSleep();render()});
 }
 
-/* ===== Temporizador: descanso o trabajo ===== */
-const TM={mode:null,end:0,total:0,int:null,onDone:null,label:""};
-function startTimer(mode,sec,label,onDone){TM.mode=mode;TM.total=sec;TM.end=Date.now()+sec*1000;TM.onDone=onDone||null;TM.label=label;
-  $("#timer").hidden=false;$("#timer").classList.toggle("work",mode==="work");$("#timerLbl").textContent=label;document.body.classList.add("timer-on");
-  scheduleTimerNotif(sec,mode==="work"?"Tiempo":"Descanso terminado",mode==="work"?`${label}: hecho.`:`Siguiente: ${label.replace(/^Descanso · /,"")}`);
-  clearInterval(TM.int);TM.int=setInterval(tick,200);tick()}
-function tick(){const left=(TM.end-Date.now())/1000;$("#timerClock").textContent=fmtClock(Math.ceil(left));$("#timerBar").style.width=`${Math.min(100,(1-left/TM.total)*100)}%`;
-  if(left<=0){clearInterval(TM.int);TM.int=null;if(document.visibilityState==="visible"){cancelTimerNotif();bell();haptic("heavy")}
-    const cb=TM.onDone;TM.onDone=null;$("#timerLbl").textContent=TM.mode==="work"?"Hecho":"A por la siguiente";
-    setTimeout(()=>{if(!TM.int)hideTimer()},1800);cb&&cb()}}
-function startStopwatch(label,onStop){clearInterval(TM.int);TM.mode="up";TM.end=Date.now();TM.total=0;TM.label=label;TM.onDone=null;TM.onStop=onStop;
-  const t=$("#timer");t.hidden=false;t.classList.add("work");$("#timerLbl").textContent=label+" · cronómetro";document.body.classList.add("timer-on");
-  $("#tMinus").hidden=$("#tPlus").hidden=true;$("#tSkip").textContent="Parar";$("#timerBar").style.width="0";
-  TM.int=setInterval(()=>{$("#timerClock").textContent=fmtClock((Date.now()-TM.end)/1000)},250)}
-function hideTimer(){$("#tMinus").hidden=$("#tPlus").hidden=false;$("#tSkip").textContent="Saltar";$("#timer").hidden=true;document.body.classList.remove("timer-on")}
-function stopTimer(){if(TM.mode==="up"&&TM.onStop){const min=Math.round((Date.now()-TM.end)/6000)/10,cb=TM.onStop;TM.onStop=null;clearInterval(TM.int);TM.int=null;TM.mode=null;hideTimer();cb(min);return}clearInterval(TM.int);TM.int=null;TM.onDone=null;cancelTimerNotif();hideTimer()}
-function shiftTimer(d){if(!TM.int||TM.mode==="up")return;TM.end+=d*1000;TM.total=Math.max(1,TM.total+d);const left=Math.max(1,Math.round((TM.end-Date.now())/1000));
-  scheduleTimerNotif(left,TM.mode==="work"?"Tiempo":"Descanso terminado",TM.label);tick()}
-function resumeTimer(){if(TM.int&&TM.mode!=="up")tick()}
+/* ===== Temporizador (2.10.1): pasos encadenados, guardados en la sesión =====
+   active.tm = {fs, steps:[{k:"w"|"r",ix,si,sec,lbl,nx}], i, end, paused} · o {fs:true,up:true,start,ix,si} para el cronómetro.
+   Cada paso termina en end = fin del anterior + su duración, así al volver de la pantalla bloqueada se ponen al día solos. */
+let TM_INT=null,TM_BEEP=null;
+const tmS=()=>active&&active.tm;
+const setLbl=(e,it,si)=>`${e.n}${it.sets.length>1?` · ${e.t==="rounds"?"round":"serie"} ${si+1} de ${it.sets.length}`:""}`;
+/* pasos desde la serie (ix,si): sus series con tiempo pendientes y las de los ejercicios con tiempo que siguen; sin descanso al final */
+function buildChain(ix,si){const steps=[];
+  for(let i=ix;i<active.items.length;i++){const it=active.items[i],e=exById(it.ex),T=TYPE[e.t];if(!T.timed||it.ex==="test-partida")break;
+    it.sets.forEach((s,j)=>{if((i===ix&&j<si)||s.done)return;const sec=T.sec(num(s.a));if(sec>0)steps.push({k:"w",ix:i,si:j,sec,lbl:setLbl(e,it,j)},{k:"r",sec:it.rest||0,lbl:"Descanso"})})}
+  while(steps.length&&steps[steps.length-1].k==="r")steps.pop();
+  const out=steps.filter(x=>x.sec>0);out.forEach((x,i)=>{const n=out.slice(i+1).find(y=>y.k==="w");x.nx=n?n.lbl:""});return out}
+function tmStart(steps,fs){if(!steps.length)return;unlockAudio();TM_BEEP=null;active.tm={fs,steps,i:0,end:Date.now()+steps[0].sec*1000,paused:null};saveActive();
+  cue(steps[0].k==="w"?"work":"rest");tmSchedule();tmLoop()}
+function tmLoop(){clearInterval(TM_INT);TM_INT=setInterval(tmTick,200);tmTick()}
+function tmTick(){const t=tmS();if(!t){clearInterval(TM_INT);TM_INT=null;tmHide();return}
+  if(t.up){tmDraw(t,(Date.now()-t.start)/1000);return}
+  if(t.paused!=null){tmDraw(t,t.paused);return}
+  let left=(t.end-Date.now())/1000;
+  while(left<=0){const late=left<-1.5;tmNext(t,late);if(!tmS())return;left=(t.end-Date.now())/1000}
+  const vis=document.visibilityState==="visible",whole=Math.ceil(left);
+  if(vis&&whole!==TM_BEEP&&(whole===10||whole<=3)&&t.steps[t.i].sec>whole){TM_BEEP=whole;cue(whole===10?"ten":"count")}
+  if(vis&&left<0.7)cancelTimerNotif(t.i);
+  tmDraw(t,left)}
+/* fin del paso actual; late = ya pasó hace rato (la app estaba en segundo plano): sin sonido */
+function tmNext(t,late){const st=t.steps[t.i];
+  if(st.k==="w"){const it=active.items[st.ix],s=it&&it.sets[st.si];if(s&&!s.done){s.done=true;rowDone(st.ix,st.si)}}
+  t.i++;TM_BEEP=null;
+  if(t.i>=t.steps.length){active.tm=null;saveActive();if(!late)cue("end");tmHide();updateCount();return}
+  t.end+=t.steps[t.i].sec*1000;saveActive();updateCount();if(!late)cue(t.steps[t.i].k==="w"?"work":"rest")}
+function rowDone(ix,si){const r=view().querySelector(`.ex[data-ix="${ix}"] .set[data-si="${si}"]`);if(r)r.classList.add("done")}
+/* avisos nativos de todos los pasos que quedan (suenan con la pantalla bloqueada) */
+function tmSchedule(){const t=tmS();cancelTimerNotifs();if(!t||t.up||t.paused!=null)return;let at=t.end;const list=[];
+  for(let i=t.i;i<t.steps.length;i++){if(i>t.i)at+=t.steps[i].sec*1000;const st=t.steps[i],nx=t.steps[i+1];
+    list.push({k:i,at,title:!nx?"Hecho":nx.k==="w"?`¡Vamos! ${nx.lbl}`:`Descanso ${fmtClock(nx.sec)}`,body:!nx?`${st.lbl}: terminado.`:nx.k==="r"&&nx.nx?`Luego: ${nx.nx}`:st.lbl})}
+  scheduleTimerNotifs(list)}
+function tmPause(){const t=tmS();if(!t||t.up)return;if(t.paused==null)t.paused=Math.max(0,(t.end-Date.now())/1000);else{t.end=Date.now()+t.paused*1000;t.paused=null}
+  haptic();saveActive();tmSchedule();tmTick()}
+function tmSkip(){const t=tmS();if(!t)return;if(t.up){stopTimer();return}t.paused=null;t.end=Date.now();tmNext(t,false);if(tmS()){tmSchedule();tmTick()}}
+function tmDraw(t,left){const st=t.up?null:t.steps[t.i],clock=fmtClock(Math.max(0,t.up?Math.floor(left):Math.ceil(left)));
+  if(t.fs){const fs=$("#fs");fs.hidden=false;document.body.classList.add("fs-on");fs.classList.toggle("rest",!t.up&&st.k==="r");fs.classList.toggle("paused",t.paused!=null);
+    $("#fsClock").textContent=clock;
+    $("#fsLbl").textContent=t.up?"Cronómetro":st.k==="w"?st.lbl:"Descanso";
+    $("#fsHint").textContent=t.up?"":t.paused!=null?"En pausa · toca para seguir":st.k==="r"&&st.nx?`${st.nx} empieza solo`:"Toca en cualquier sitio para pausar";
+    $("#fsNext").textContent=t.up?"Mantén «parar» 1 s al terminar":st.nx?`Después: ${st.k==="w"?"descanso → ":""}${st.nx}`:"Último";
+    $("#fsSkip").textContent=t.up?"Mantén: parar":"Mantén: saltar";
+    $("#fsBar").style.width=t.up?"0":`${Math.min(100,(1-left/st.sec)*100)}%`;$("#timer").hidden=true;document.body.classList.remove("timer-on");return}
+  $("#fs").hidden=true;document.body.classList.remove("fs-on");
+  const tm=$("#timer");tm.hidden=false;document.body.classList.add("timer-on");
+  $("#timerLbl").textContent=st.lbl+(st.nx?` · ${st.nx}`:"");$("#timerClock").textContent=clock;$("#timerBar").style.width=`${Math.min(100,(1-left/st.sec)*100)}%`}
+function tmHide(){$("#fs").hidden=true;$("#timer").hidden=true;document.body.classList.remove("fs-on","timer-on")}
+function startStopwatch(ix,si){unlockAudio();active.tm={fs:true,up:true,start:Date.now(),ix,si};saveActive();cue("work");tmLoop()}
+/* para el cronómetro (guarda los minutos) o corta lo que esté en marcha sin contar el paso actual */
+function stopTimer(){const t=tmS();clearInterval(TM_INT);TM_INT=null;cancelTimerNotifs();
+  if(t&&t.up){const min=Math.round((Date.now()-t.start)/6000)/10,it=active.items[t.ix],s=it&&it.sets[t.si];active.tm=null;
+    if(s){s.a=min;s.done=true}saveActive();cue("end");tmHide();viewSession();return}
+  if(active){active.tm=null;saveActive()}tmHide();if(active&&$("#setCount"))updateCount()}
+function shiftTimer(d){const t=tmS();if(!t||t.up||t.paused!=null)return;t.end+=d*1000;t.steps[t.i].sec=Math.max(1,t.steps[t.i].sec+d);saveActive();tmSchedule();tmTick()}
+function resumeTimer(){if(tmS())tmLoop()}
+/* mantener pulsado 1 s (vale con guantes y evita saltos por un golpe) */
+function holdBtn(el,fn){let h=null;const off=()=>{clearTimeout(h);h=null;el.classList.remove("holding")};
+  el.addEventListener("pointerdown",e=>{e.stopPropagation();el.classList.add("holding");h=setTimeout(()=>{off();haptic("heavy");fn()},1000)});
+  ["pointerup","pointerleave","pointercancel"].forEach(ev=>el.addEventListener(ev,e=>{e.stopPropagation();off()}));
+  el.addEventListener("click",e=>e.stopPropagation())}
 
 /* ===== Terminar: sensaciones y resumen ===== */
 function scaleHTML(id,from,val){return `<div class="scale" id="${id}">${Array.from({length:11},(_,i)=>i).filter(i=>i>=from).map(i=>`<button type="button" data-v="${i}" class="${val===i?"on":""}">${i}</button>`).join("")}</div>`}
@@ -91,7 +136,7 @@ function saveSession(feel){const a=active,prev=prMap();
   const items=a.items.map(i=>({ex:i.ex,sets:i.sets.filter(s=>s.done).map(s=>({a:num(s.a),b:s.b===""||s.b==null?"":num(s.b),done:true}))})).filter(i=>i.sets.length);
   const sess={id:a.id,routineId:a.routineId,name:a.name,week:a.week,start:a.start,end:Date.now(),items,feel};
   const prs=items.map(i=>{const e=exById(i.ex),b=best(e.t,i.sets),p=prev[i.ex];return (!p||b>p.v)&&b>0?{n:e.n,v:b,u:TYPE[e.t].best,old:p?p.v:null}:null}).filter(Boolean);
-  S.sessions.push(sess);save();active=null;saveActive();stopTimer();haptic("heavy");autoBackup(true);
+  stopTimer();S.sessions.push(sess);save();active=null;saveActive();allowSleep();haptic("heavy");autoBackup(true);
   const sets=items.reduce((n,i)=>n+i.sets.length,0),v=volume(sess);
   openSheet(`<p class="lbl acc">Guardado</p><h3>${esc(sess.name)}</h3><div class="stats" style="margin:16px 0">
     <div class="stat"><div class="v">${Math.round((sess.end-sess.start)/60000)}</div><div class="lbl">minutos</div></div>

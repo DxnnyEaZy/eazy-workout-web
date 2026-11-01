@@ -13,7 +13,12 @@ async function notifyPermissionOk(){const LN=P("LocalNotifications");if(!LN)retu
 async function scheduleTimerNotif(sec,title,body){const LN=P("LocalNotifications");if(!LN)return;
   try{await LN.cancel({notifications:[{id:ID.timer}]});
     await LN.schedule({notifications:[{id:ID.timer,title,body,channelId:"timer",schedule:{at:new Date(Date.now()+sec*1000),allowWhileIdle:true},smallIcon:"ic_stat_diario",iconColor:"#7F93A3"}]})}catch(e){console.warn(e)}}
-async function cancelTimerNotif(){const LN=P("LocalNotifications");if(!LN)return;try{await LN.cancel({notifications:[{id:ID.timer}]})}catch(e){}}
+async function cancelTimerNotif(k){const LN=P("LocalNotifications");if(!LN)return;try{await LN.cancel({notifications:[{id:ID.timer+(k||0)}]})}catch(e){}}
+/* 2.10.1: un aviso por cada paso que queda del encadenado (ids ID.timer + índice del paso) */
+const TIMER_MAX=60;
+async function cancelTimerNotifs(){const LN=P("LocalNotifications");if(!LN)return;try{await LN.cancel({notifications:Array.from({length:TIMER_MAX},(_,k)=>({id:ID.timer+k}))})}catch(e){}}
+async function scheduleTimerNotifs(list){const LN=P("LocalNotifications");if(!LN||!list.length)return;
+  try{await LN.schedule({notifications:list.slice(0,TIMER_MAX).filter(x=>x.at>Date.now()).map(x=>({id:ID.timer+x.k,title:x.title,body:x.body,channelId:"timer",schedule:{at:new Date(x.at),allowWhileIdle:true},smallIcon:"ic_stat_diario",iconColor:"#7F93A3"}))})}catch(e){console.warn(e)}}
 const atTime=(d,hhmm)=>{const [h,m]=String(hhmm||"18:30").split(":").map(Number);const x=new Date(d);x.setHours(h||0,m||0,0,0);return x};
 /* Recordatorios de los próximos 14 días según la semana y el plan */
 /* hora del aviso de cada rutina: la suya propia o la general */
@@ -44,7 +49,18 @@ let actx=null;
 function unlockAudio(){try{if(!actx)actx=new (window.AudioContext||window.webkitAudioContext)();if(actx.state==="suspended")actx.resume()}catch(e){}}
 function bell(){try{if(!actx)return;const t=actx.currentTime;[0,.22,.44].forEach((d,i)=>{const o=actx.createOscillator(),g=actx.createGain();o.type="sine";o.frequency.value=i===2?1175:880;
   g.gain.setValueAtTime(.0001,t+d);g.gain.exponentialRampToValueAtTime(.35,t+d+.01);g.gain.exponentialRampToValueAtTime(.0001,t+d+.35);o.connect(g);g.connect(actx.destination);o.start(t+d);o.stop(t+d+.4)})}catch(e){}}
-let wl=null;async function keepAwake(){try{if(navigator.wakeLock&&!wl){wl=await navigator.wakeLock.request("screen");wl.addEventListener("release",()=>wl=null)}}catch(e){}}
+/* Pitidos del temporizador (2.10.1): inicio de round, inicio de descanso, aviso a 10 s, 3-2-1 y fin */
+function beep(freq,dur,at=0,vol=.4){try{if(!actx)return;const t=actx.currentTime+at,o=actx.createOscillator(),g=actx.createGain();o.type="square";o.frequency.value=freq;
+  g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.01);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+dur+.05)}catch(e){}}
+function cue(kind){if(document.visibilityState!=="visible")return;
+  if(kind==="work"){beep(988,.18);beep(1319,.3,.22);haptic("heavy")}
+  else if(kind==="rest"){beep(523,.45);haptic()}
+  else if(kind==="ten"){beep(784,.2);beep(784,.2,.3);haptic()}
+  else if(kind==="count"){beep(880,.15);haptic()}
+  else if(kind==="end"){bell();haptic("heavy")}}
+/* Pantalla encendida durante la sesión: plugin nativo en Android; en la web, Wake Lock si existe */
+let wl=null;async function keepAwake(){const K=P("KeepAwake");try{if(K){await K.keepAwake();return}if(navigator.wakeLock&&!wl){wl=await navigator.wakeLock.request("screen");wl.addEventListener("release",()=>wl=null)}}catch(e){}}
+async function allowSleep(){const K=P("KeepAwake");try{if(K){await K.allowSleep();return}if(wl){await wl.release();wl=null}}catch(e){}}
 
 /* Teclado: la hoja inferior y el campo enfocado quedan siempre por encima */
 function setKb(h){document.documentElement.style.setProperty("--kb",Math.max(0,Math.round(h))+"px");

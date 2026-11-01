@@ -60,7 +60,8 @@ function onResume(){resumeTimer();if(active)keepAwake();scheduleReminders();auto
 (async()=>{
   document.querySelectorAll(".navbtn").forEach(b=>b.onclick=()=>go(b.dataset.tab));
   $("#btnSettings").onclick=settingsSheet;
-  $("#tMinus").onclick=()=>shiftTimer(-15);$("#tPlus").onclick=()=>shiftTimer(15);$("#tSkip").onclick=stopTimer;
+  $("#tMinus").onclick=()=>shiftTimer(-15);$("#tPlus").onclick=()=>shiftTimer(15);$("#tSkip").onclick=()=>tmSkip();
+  $("#fs").addEventListener("click",()=>tmPause());holdBtn($("#fsSkip"),()=>tmSkip());holdBtn($("#fsExit"),()=>stopTimer());
   $("#importFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{let d;try{d=JSON.parse(rd.result)}catch(x){toast("Ese archivo no es una copia válida");return}
     confirmSheet("¿Reemplazar tus datos?",`Se cargarán ${(d.routines||[]).length} rutinas y ${(d.sessions||[]).length} sesiones. Lo que tienes ahora se sustituye (podrás deshacerlo en Ajustes).`,"Importar",async()=>{try{await importJSON(rd.result);render();scheduleReminders();toast("Datos importados. Puedes deshacerlo en Ajustes")}catch(x){toast("Ese archivo no es una copia de EaZy-Workout")}},false)};rd.readAsText(f);e.target.value=""};
   setInterval(()=>{const el=$("#elapsed");if(el&&active)el.textContent=fmtClock((Date.now()-active.start)/1000)},1000);
