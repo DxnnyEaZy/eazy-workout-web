@@ -64,7 +64,10 @@ function prMap(before){const m={};for(const s of real()){if(before&&s.start>=bef
 const isMob=s=>{const r=routineById(s.routineId);return !!(r&&r.mobility)};
 function streak(){const weeks=new Set(real().filter(s=>!isMob(s)).map(s=>mondayOf(s.start).getTime()));let w=mondayOf(new Date());if(!weeks.has(w.getTime()))w.setDate(w.getDate()-7);
   let n=0;while(weeks.has(w.getTime())){n++;w.setDate(w.getDate()-7)}return n}
-function fmtSet(t,s){if(t==="kg")return `${s.a}kg×${s.b}`;if(t==="time")return `${s.a}s`;if(t==="run")return `${s.a}'${s.b?`/${s.b}km`:""}`;if(t==="rounds")return `${s.a}'`;return `${s.a}`}
+/* minutos → «14:18» si no son enteros; ritmo en min/km si hay km (2.10.4) */
+const fmtMin=m=>{m=num(m);return Number.isInteger(m)?`${m}'`:fmtClock(m*60)};
+const fmtPace=(m,km)=>num(km)>0&&num(m)>0?`${fmtClock(num(m)*60/num(km))}/km`:"";
+function fmtSet(t,s){if(t==="kg")return `${s.a}kg×${s.b}`;if(t==="time")return `${s.a}s`;if(t==="run")return `${fmtMin(s.a)}${num(s.b)>0?` · ${s.b} km · ${fmtPace(s.a,s.b)}`:""}`;if(t==="rounds")return `${s.a}'`;return `${s.a}`}
 
 /* ===== Datos de ejemplo (no cuentan en récords ni racha) ===== */
 function makeDemo(){const out=[],mon=mondayOf(new Date());

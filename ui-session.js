@@ -25,14 +25,14 @@ function viewSession(){const a=active;document.body.style.setProperty("--c",sess
 }
 function updateCount(){const all=active.items.flatMap(i=>i.sets),d=all.filter(s=>s.done).length;const el=$("#setCount");if(el)el.textContent=`${d}/${all.length} series`;const tl=$("#tl");if(tl)tl.innerHTML=timelineHTML()}
 function exCard(it,ix){const e=exById(it.ex),T=TYPE[e.t],last=lastFor(it.ex,active.id),two=!!T.b,timed=T.timed;
-  const cls=timed?"timed":two?"":"one";
+  const cls=timed?(two?"timed timed2":"timed"):two?"":"one";
   return `<div class="ex rise" data-ix="${ix}"><div class="ex-h"><div class="thumb">${poseSVG(it.ex)}</div><div class="grow"><div class="n">${esc(e.n)}</div>
     ${it.ex==="test-partida"?`<div class="obj">Pulsa ▶, trota a ritmo conversacional y pulsa Parar cuando tengas que andar</div>`:it.target?`<div class="obj">Objetivo ${it.sets.length}×${it.target} ${T.obj}</div>`:""}
     <div class="last">${last?`Última (${fmtDate(last.date)}): ${last.sets.map(z=>fmtSet(e.t,z)).join(" · ")}`:"Primera vez"}</div></div>
     <div class="stack" style="align-items:flex-end;gap:4px">${e.lumbar?`<span class="tag warn">Lumbar</span>`:""}${it.rest?`<span class="tag">${it.rest}s desc.</span>`:""}</div></div>
     ${it.sets.map((s,si)=>`<div class="set ${cls} ${s.done?"done":""}" data-si="${si}"><span class="i">${si+1}</span>
       <div><input inputmode="decimal" data-f="a" value="${esc(s.a)}" aria-label="${T.a} serie ${si+1}"><div class="u">${T.a}</div></div>
-      ${two&&!timed?`<div><input inputmode="decimal" data-f="b" value="${esc(s.b)}" aria-label="${T.b} serie ${si+1}"><div class="u">${T.b}</div></div>`:""}
+      ${two?`<div><input inputmode="decimal" data-f="b" value="${esc(s.b)}" aria-label="${T.b} serie ${si+1}"><div class="u">${T.b}</div></div>`:""}
       ${timed?`<button class="play" data-play type="button" aria-label="Iniciar cuenta atrás">${ICON.play}</button>`:""}
       <button class="check" data-done type="button" aria-label="Marcar serie ${si+1}">${ICON.check}</button></div>`).join("")}
     <div class="ex-f"><button class="btn sm" data-add type="button">+ Serie</button><button class="btn sm" data-rm type="button">− Serie</button><span class="grow"></span><button class="btn sm" data-del type="button">Quitar</button></div></div>`}
@@ -113,7 +113,7 @@ function tmHide(){$("#fs").hidden=true;$("#timer").hidden=true;document.body.cla
 function startStopwatch(ix,si){unlockAudio();active.tm={fs:true,up:true,start:Date.now(),ix,si};saveActive();cue("work");tmLoop()}
 /* para el cronómetro (guarda los minutos) o corta lo que esté en marcha sin contar el paso actual */
 function stopTimer(){const t=tmS();clearInterval(TM_INT);TM_INT=null;cancelTimerNotifs();
-  if(t&&t.up){const min=Math.round((Date.now()-t.start)/6000)/10,it=active.items[t.ix],s=it&&it.sets[t.si];active.tm=null;
+  if(t&&t.up){const min=Math.round((Date.now()-t.start)/600)/100,it=active.items[t.ix],s=it&&it.sets[t.si];active.tm=null;
     if(s){s.a=min;s.done=true}saveActive();cue("end");tmHide();viewSession();return}
   if(active){active.tm=null;saveActive()}tmHide();if(active&&$("#setCount"))updateCount()}
 function shiftTimer(d){const t=tmS();if(!t||t.up||t.paused!=null)return;t.end+=d*1000;t.steps[t.i].sec=Math.max(1,t.steps[t.i].sec+d);saveActive();tmSchedule();tmTick()}

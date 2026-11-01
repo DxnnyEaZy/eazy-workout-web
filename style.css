@@ -257,3 +257,4 @@ body.fs-on{overflow:hidden}
 .big3 .btn{min-height:96px;flex-direction:column;gap:4px;font-size:16px}
 .big3 .btn b{font:900 italic 38px/1 var(--disp)}
 .brand .lbl,.wkpill .lbl{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.set.timed2{grid-template-columns:24px 1fr 1fr 48px 56px}
