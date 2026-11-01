@@ -38,7 +38,7 @@ function bindBack(){const b=$("#back");if(b)b.onclick=back}
 
 /* ajustes */
 function restoreSheet(){bkList().then(list=>openSheet(`<h3>Restaurar una copia</h3><p class="sub">Tus datos actuales se guardan antes y podrás deshacerlo en Ajustes.</p>
-  <div class="stack" style="margin-top:12px">${list.length?list.map((b,i)=>`<button class="btn wide" type="button" data-bk="${i}">${new Date(b.day+"T12:00:00").toLocaleDateString("es-ES",{weekday:"long",day:"numeric",month:"long"})}</button>`).join(""):`<p class="sub">Todavía no hay copias.</p>`}</div>
+  <div class="stack" style="margin-top:12px">${list.length?list.map((b,i)=>`<button class="btn wide" type="button" data-bk="${i}">${new Date(b.day+"T12:00:00").toLocaleDateString("es-ES",{weekday:"long",day:"numeric",month:"long"})}</button>`).join(""):`<p class="sub">No hay copias aquí. Si reinstalaste la app, usa «Importar copia» y elige el archivo en Documentos/EaZy-Workout.</p>`}</div>
   <button class="btn wide" id="bkCancel" type="button" style="margin-top:12px">Cancelar</button>`,()=>{
   $("#bkCancel").onclick=closeSheet;
   document.querySelectorAll("[data-bk]").forEach(b=>b.onclick=async()=>{const it=list[+b.dataset.bk];
@@ -65,7 +65,7 @@ function settingsSheet(){const st=S.settings,w=planWeek(),demoN=S.sessions.filte
     <label class="f"><span class="lbl">Inicio del plan (lunes de la semana 1)</span><input type="date" id="stStart" value="${esc(st.planStart)}"></label>
     <span class="lbl" style="margin-top:8px">Tus datos</span>
     <div class="card" style="margin:0;--c:var(--good)"><p style="margin:0;font-weight:500">Copia automática: activada</p>
-      <p class="sub" style="margin:4px 0 12px">${BKMETA?`Última: ${new Date(BKMETA.at).toLocaleDateString("es-ES",{weekday:"short",day:"numeric",month:"short"})} ${new Date(BKMETA.at).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})} · `:""}se guardan las 7 últimas<br>${BKMETA&&BKMETA.where==="app"?"En la carpeta interna de la app":BKMETA&&BKMETA.where==="web"?"En este navegador":"Documentos / EaZy-Workout"} · no te protege si pierdes el móvil: sube alguna a Drive de vez en cuando</p>
+      <p class="sub" style="margin:4px 0 12px">${BKMETA?`Última: ${new Date(BKMETA.at).toLocaleDateString("es-ES",{weekday:"short",day:"numeric",month:"short"})} ${new Date(BKMETA.at).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})} · `:""}se guardan las ${BKMETA&&BKMETA.where==="web"?3:7} últimas<br>${BKMETA&&BKMETA.where==="app"?"En la carpeta interna de la app":BKMETA&&BKMETA.where==="web"?"En este navegador":"Documentos / EaZy-Workout"} · no te protege si pierdes el móvil: sube alguna a Drive de vez en cuando</p>
       <div class="row"><button class="btn grow" id="stBkNow" type="button">Copiar ahora</button><button class="btn grow" id="stBkRestore" type="button">Restaurar…</button></div></div>
     <button class="btn wide" id="stReport" type="button">Exportar resumen semanal</button>
     <button class="btn wide" id="stExport" type="button">Exportar copia completa (.json)</button>

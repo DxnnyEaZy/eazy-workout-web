@@ -18,7 +18,7 @@ async function cancelTimerNotif(k){const LN=P("LocalNotifications");if(!LN)retur
 const TIMER_MAX=60;
 async function cancelTimerNotifs(){const LN=P("LocalNotifications");if(!LN)return;try{await LN.cancel({notifications:Array.from({length:TIMER_MAX},(_,k)=>({id:ID.timer+k}))})}catch(e){}}
 async function scheduleTimerNotifs(list){const LN=P("LocalNotifications");if(!LN||!list.length)return;
-  try{await LN.schedule({notifications:list.slice(0,TIMER_MAX).filter(x=>x.at>Date.now()).map(x=>({id:ID.timer+x.k,title:x.title,body:x.body,channelId:"timer",schedule:{at:new Date(x.at),allowWhileIdle:true},smallIcon:"ic_stat_diario",iconColor:"#7F93A3"}))})}catch(e){console.warn(e)}}
+  try{await LN.schedule({notifications:list.filter(x=>x.k<TIMER_MAX&&x.at>Date.now()).map(x=>({id:ID.timer+x.k,title:x.title,body:x.body,channelId:"timer",schedule:{at:new Date(x.at),allowWhileIdle:true},smallIcon:"ic_stat_diario",iconColor:"#7F93A3"}))})}catch(e){console.warn(e)}}
 const atTime=(d,hhmm)=>{const [h,m]=String(hhmm||"18:30").split(":").map(Number);const x=new Date(d);x.setHours(h||0,m||0,0,0);return x};
 /* Recordatorios de los próximos 14 días según la semana y el plan */
 /* hora del aviso de cada rutina: la suya propia o la general */

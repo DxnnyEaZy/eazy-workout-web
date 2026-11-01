@@ -15,7 +15,7 @@ function tileHTML(r,{hero=false,today=false}={}){const w=planWeek(),its=routineI
     <div class="pv"><span class="badge">${CATS[catOf(r)].n}${today&&r.mobility?" · mañana":""}</span>${done?`<span class="tag fill done">Hecha</span>`:""}${heroPose(r,its)}</div>
     <div class="nm"><b>${esc(r.name)}</b><small>${its.length?`${plural(its.length,"ejercicio")} · ${sets} series`:"Esta semana no toca"}</small>
     ${hero?`<div class="go"><span class="lbl">Ver la sesión</span><span class="chev">→</span></div>`:""}</div></button>`}
-function viewToday(){const now=new Date(),rs=todayList(now),w=planWeek(),main=rs.filter(r=>!r.mobility),mob=rs.filter(r=>r.mobility),pend=pendingYesterday(),yk=isoDay(new Date(Date.now()-864e5));
+function viewToday(){const now=new Date(),rs=todayList(now),w=planWeek(),main=rs.filter(r=>!r.mobility),mob=rs.filter(r=>r.mobility),pend=pendingYesterday(),yk=yesterdayKey();
   const recent=sorted().slice(0,3);
   view().innerHTML=`<p class="lbl">${S.profile&&S.profile.name?`Hola, ${esc(S.profile.name)} · `:""}${now.toLocaleDateString("es-ES",{weekday:"long",day:"numeric",month:"long"})}</p>
   <h1>${main.length?"Hoy toca":"Hoy descansas"}</h1><p class="sub">${esc(planNote(w))}</p>
@@ -61,9 +61,10 @@ function viewPreview(rid,day){const r=routineById(rid);if(!r){back();return}cons
 }
 
 /* «Mover a…» (2.10.2): solo esa vez; la semana fija no cambia */
-function moveSheet(rid,from,fromPreview){const r=routineById(rid),t0=new Date(),days=Array.from({length:7},(_,i)=>{const d=new Date(t0);d.setDate(t0.getDate()+i);return isoDay(d)}).filter(k=>k!==from);
+function moveSheet(rid,from,fromPreview){const r=routineById(rid),t0=new Date(),tk=isoDay(t0),days=Array.from({length:7},(_,i)=>{const d=new Date(t0);d.setDate(t0.getDate()+i);return isoDay(d)})
+    .filter(k=>k!==from&&!todayList(new Date(k+"T12:00:00")).includes(r)),quick=days.filter(k=>k===tk||k===days.find(x=>x>tk)).slice(0,2);
   openSheet(`<h3>Mover ${esc(r.name)}</h3><p class="sub">Tocaba el ${new Date(from+"T12:00:00").toLocaleDateString("es-ES",{weekday:"long",day:"numeric"})}. Solo esta vez: tu semana no cambia.</p>
-  <div class="row" style="margin-top:14px">${days.slice(0,2).map((k,i)=>`<button class="btn grow ${i?"":"on"}" type="button" data-mv="${k}">${k===isoDay(t0)?"Hoy":"Mañana"}</button>`).join("")}</div>
+  <div class="row" style="margin-top:14px">${quick.map((k,i)=>{const d=new Date(t0);d.setDate(d.getDate()+1);return `<button class="btn grow ${i?"":"on"}" type="button" data-mv="${k}">${k===tk?"Hoy":k===isoDay(d)?"Mañana":fmtDay(k)}</button>`}).join("")}</div>
   <span class="lbl" style="display:block;margin:14px 0 8px">O elige día</span><div class="chips7">${days.map(k=>{const d=new Date(k+"T12:00:00");return `<button type="button" data-mv="${k}"><small>${d.toLocaleDateString("es-ES",{weekday:"short"})}</small><b>${d.getDate()}</b></button>`}).join("")}</div>
   <button class="btn wide" type="button" id="mvSkip" style="margin-top:12px">Dejarla (saltada)</button><button class="btn wide" id="mvCancel" type="button" style="margin-top:8px">Cancelar</button>`,()=>{
   document.querySelectorAll("#sheetRoot [data-mv]").forEach(b=>b.onclick=()=>{moveRoutine(rid,from,b.dataset.mv);closeSheet();scheduleReminders();if(fromPreview)back();render();toast(`Movida al ${fmtDay(b.dataset.mv)}`)});
