@@ -1,6 +1,6 @@
 "use strict";
 /* ===== Estado y guardado ===== */
-const S={routines:[],custom:[],schedule:{},sessions:[],body:[],goals:[],profile:null,demoDone:false,
+const S={routines:[],custom:[],schedule:{},sessions:[],body:[],goals:[],profile:null,demoDone:false,moves:[],
   settings:{planStart:"",weekOverride:0,remindOn:true,remindTime:"18:30",morningTime:"08:30"}};
 let active=null;
 const KEY="diario.v2", KEY_ACTIVE="diario.active", KEY_PREV="diario.prev";
@@ -12,7 +12,7 @@ async function kvGet(k){try{const p=Pref();if(p){const r=await p.get({key:k});re
 async function kvSet(k,v){try{const p=Pref(),s=v==null?null:JSON.stringify(v);if(p){s==null?await p.remove({key:k}):await p.set({key:k,value:s});return}
   s==null?localStorage.removeItem(k):localStorage.setItem(k,s)}catch(e){console.warn(e)}}
 let saveT=null;
-const snapshot=()=>({v:2,routines:S.routines,custom:S.custom,schedule:S.schedule,sessions:S.sessions,body:S.body,goals:S.goals,profile:S.profile,demoDone:S.demoDone,settings:S.settings});
+const snapshot=()=>({v:2,routines:S.routines,custom:S.custom,schedule:S.schedule,sessions:S.sessions,body:S.body,goals:S.goals,profile:S.profile,demoDone:S.demoDone,moves:S.moves,settings:S.settings});
 /* guardado inmediato (sin esperas): en web también a localStorage de forma síncrona, para no perder nada si se cierra la app */
 let LOADED=false;
 function save(){if(!LOADED)return;clearTimeout(saveT);const d=snapshot();try{if(!Pref())localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}saveT=setTimeout(()=>kvSet(KEY,d),0)}
@@ -20,9 +20,10 @@ function flush(){if(!LOADED)return;try{const d=snapshot();if(!Pref())localStorag
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="hidden")flush()});window.addEventListener("pagehide",flush);
 function saveActive(){kvSet(KEY_ACTIVE,active)}
 function mondayOf(d){const x=new Date(d);x.setHours(0,0,0,0);x.setDate(x.getDate()-((x.getDay()+6)%7));return x}
+const fmtDay=k=>new Date(k+"T12:00:00").toLocaleDateString("es-ES",{weekday:"short",day:"numeric"});
 const isoDay=d=>{const x=new Date(d);return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}-${String(x.getDate()).padStart(2,"0")}`};
 async function load(){const d=await kvGet(KEY);
-  if(d){Object.assign(S,{routines:d.routines||defaultRoutines(),custom:d.custom||[],schedule:d.schedule||structuredClone(DEFAULT_SCHEDULE),sessions:d.sessions||[],body:d.body||[],goals:d.goals||[],profile:d.profile||null,demoDone:!!d.demoDone});
+  if(d){Object.assign(S,{routines:d.routines||defaultRoutines(),custom:d.custom||[],schedule:d.schedule||structuredClone(DEFAULT_SCHEDULE),sessions:d.sessions||[],body:d.body||[],goals:d.goals||[],profile:d.profile||null,demoDone:!!d.demoDone,moves:d.moves||[]});
     const defs=defaultRoutines();for(const r of S.routines){const df=defs.find(x=>x.id===r.id);if(df&&!r.cat)r.cat=df.cat}Object.assign(S.settings,d.settings||{});danifyIfNeeded(d)}
   else{S.routines=[];S.schedule={0:[],1:[],2:[],3:[],4:[],5:[],6:[]}}
   if(!S.settings.planStart)S.settings.planStart=isoDay(mondayOf(new Date()));
@@ -42,7 +43,17 @@ function routineItems(r,w){return r.items.map(it=>({...it,...itemWeek(it,w)})).f
 const allEx=()=>LIB.concat(S.custom);
 const exById=id=>allEx().find(e=>e.id===id)||{id,n:id,g:"Otros",t:"reps"};
 const routineById=id=>S.routines.find(r=>r.id===id);
-const todayList=(d=new Date())=>(S.schedule[d.getDay()]||[]).map(routineById).filter(Boolean);
+/* Lo que toca un día: la semana fija, sin lo movido a otro día y con lo movido a ese día (2.10.2) */
+function todayList(d=new Date()){const k=isoDay(d),ids=(S.schedule[d.getDay()]||[]).filter(id=>!S.moves.some(m=>m.from===k&&m.rid===id));
+  for(const m of S.moves)if(m.to===k&&!ids.includes(m.rid))ids.push(m.rid);return ids.map(routineById).filter(Boolean)}
+/* mover solo esa vez (to = día destino, o null = dejarla/saltada); sustituye un movimiento anterior de la misma rutina y día */
+function moveRoutine(rid,from,to){S.moves=S.moves.filter(m=>!(m.rid===rid&&m.from===from));
+  const back=S.moves.find(m=>m.rid===rid&&m.to===from);if(back){back.to=to}else if(to!==from)S.moves.push({rid,from,to});
+  const cut=isoDay(new Date(Date.now()-90*864e5));S.moves=S.moves.filter(m=>m.from>=cut);save()}
+const movedFrom=k=>S.moves.filter(m=>m.from===k);
+/* lo de ayer que no se hizo ni se movió (sin movilidad) */
+function pendingYesterday(){const y=new Date();y.setDate(y.getDate()-1);const k=isoDay(y);if(k<S.settings.planStart)return [];
+  return todayList(y).filter(r=>!r.mobility&&!S.sessions.some(s=>s.routineId===r.id&&(isoDay(s.start)===k||isoDay(s.start)===isoDay(new Date()))))}
 const sorted=()=>S.sessions.slice().sort((a,b)=>b.start-a.start);
 const real=()=>S.sessions.filter(s=>!s.demo);
 function best(t,sets){const d=sets.filter(s=>s.done);if(!d.length)return 0;if(t==="rounds")return d.length;return Math.max(...d.map(s=>num(s.a)))}
@@ -65,13 +76,13 @@ function makeDemo(){const out=[],mon=mondayOf(new Date());
   return out}
 
 /* ===== Exportar / informe ===== */
-function exportJSON(){return JSON.stringify({app:"diario",v:2,exported:new Date().toISOString(),routines:S.routines,custom:S.custom,schedule:S.schedule,settings:S.settings,sessions:S.sessions,body:S.body,goals:S.goals,profile:S.profile,active})}
+function exportJSON(){return JSON.stringify({app:"diario",v:2,exported:new Date().toISOString(),moves:S.moves,routines:S.routines,custom:S.custom,schedule:S.schedule,settings:S.settings,sessions:S.sessions,body:S.body,goals:S.goals,profile:S.profile,active})}
 function checkImport(txt){const d=JSON.parse(txt);if(!d||!Array.isArray(d.routines)||!Array.isArray(d.sessions))throw new Error("formato");return d}
-function applyData(d){S.routines=d.routines;S.custom=d.custom||[];S.schedule=d.schedule||structuredClone(DEFAULT_SCHEDULE);S.sessions=d.sessions;S.body=d.body||[];S.goals=d.goals||S.goals;S.profile=d.profile||S.profile;S.demoDone=true;Object.assign(S.settings,d.settings||{});save();if("active" in d){active=d.active||null;saveActive()}}
+function applyData(d){S.routines=d.routines;S.custom=d.custom||[];S.schedule=d.schedule||structuredClone(DEFAULT_SCHEDULE);S.sessions=d.sessions;S.body=d.body||[];S.goals=d.goals||S.goals;S.profile=d.profile||S.profile;S.moves=d.moves||[];S.demoDone=true;Object.assign(S.settings,d.settings||{});save();if("active" in d){active=d.active||null;saveActive()}}
 /* Importar: primero se guarda (y se espera) la copia de lo que hay, después se reemplaza. Solo se guarda la última. */
 async function importJSON(txt){const d=checkImport(txt);const prev={at:Date.now(),data:JSON.parse(JSON.stringify(snapshot())),active:active?JSON.parse(JSON.stringify(active)):null};
   await kvSet(KEY_PREV,prev);PREV=prev;applyData(d)}
-function undoImport(){if(!PREV||!PREV.data)return false;const d=PREV.data;S.routines=d.routines;S.custom=d.custom||[];S.schedule=d.schedule;S.sessions=d.sessions;S.body=d.body||[];S.goals=d.goals||[];S.profile=d.profile||null;S.demoDone=!!d.demoDone;
+function undoImport(){if(!PREV||!PREV.data)return false;const d=PREV.data;S.routines=d.routines;S.custom=d.custom||[];S.schedule=d.schedule;S.sessions=d.sessions;S.body=d.body||[];S.goals=d.goals||[];S.profile=d.profile||null;S.demoDone=!!d.demoDone;S.moves=d.moves||[];
   for(const k of Object.keys(S.settings))delete S.settings[k];Object.assign(S.settings,d.settings);save();if("active" in PREV){active=PREV.active||null;saveActive()}PREV=null;kvSet(KEY_PREV,null);return true}
 /* ===== Copia automática (2.10.0) =====
    Una copia al día (al abrir la app y al terminar una sesión; la del día se reescribe) y se guardan las 7 últimas.
@@ -98,7 +109,9 @@ async function autoBackup(force){if(!LOADED)return;const day=isoDay(new Date());
 function weeklyReport(days=7){const from=Date.now()-days*864e5,w=planWeek(),ss=real().filter(s=>s.start>=from).sort((a,b)=>a.start-b.start);
   const L=[`Resumen EaZy-Workout · ${(S.profile&&S.profile.name)||""} · ${new Date().toLocaleDateString("es-ES")} · Semana ${w} de ${planLen()}${blockOver()?" (bloque terminado)":""}`,`Sesiones últimos ${days} días: ${ss.length}`,""];
   const plan=[];for(let i=days-1;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);if(isoDay(d)<S.settings.planStart)continue;for(const r of todayList(d)){if(r.mobility)continue;
-    const did=ss.some(s=>s.routineId===r.id&&isoDay(s.start)===isoDay(d));plan.push(`${DAYS[d.getDay()]} ${d.getDate()}: ${r.name} ${did?"✓ hecha":"✗ no hecha"}`)}}
+    const did=ss.some(s=>s.routineId===r.id&&isoDay(s.start)===isoDay(d)),mv=S.moves.find(m=>m.rid===r.id&&m.to===isoDay(d));
+    plan.push(`${DAYS[d.getDay()]} ${d.getDate()}: ${r.name}${mv?` (movida del ${fmtDay(mv.from)})`:""} ${did?"✓ hecha":"✗ no hecha"}`)}
+    for(const m of movedFrom(isoDay(d))){const r=routineById(m.rid);if(r&&!r.mobility)plan.push(`${DAYS[d.getDay()]} ${d.getDate()}: ${r.name} ${m.to?`→ movida al ${fmtDay(m.to)}`:"– saltada"}`)}}
   L.push("Plan vs hecho:",...plan,"");
   for(const s of ss){L.push(`${new Date(s.start).toLocaleDateString("es-ES",{weekday:"short",day:"numeric",month:"short"})} · ${s.name} · ${Math.round((s.end-s.start)/60000)} min`);
     for(const i of s.items){const e=exById(i.ex);L.push(`  - ${e.n}: ${i.sets.filter(z=>z.done).map(z=>fmtSet(e.t,z)).join(", ")}`)}

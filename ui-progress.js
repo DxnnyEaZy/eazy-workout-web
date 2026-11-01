@@ -58,7 +58,9 @@ function viewCalendar(){const now=new Date();if(!calM)calM=new Date(now.getFullY
   const byDay={};for(const s of S.sessions){const k=isoDay(s.start);(byDay[k]=byDay[k]||[]).push(catColor(routineById(s.routineId)||{items:s.items}))}
   const first=(new Date(y,m,1).getDay()+6)%7,len=new Date(y,m+1,0).getDate(),inM=sorted().filter(s=>{const d=new Date(s.start);return d.getFullYear()===y&&d.getMonth()===m});
   let c="";for(let i=0;i<first;i++)c+=`<div class="d out"></div>`;
-  for(let d=1;d<=len;d++){const k=isoDay(new Date(y,m,d)),cols=[...new Set(byDay[k]||[])];c+=`<button type="button" class="d tap ${isoDay(now)===k?"today":""}" data-cday="${k}" aria-label="${d}">${d}<span class="dots">${cols.map(x=>`<i style="--c:${x}"></i>`).join("")}</span></button>`}
+  for(let d=1;d<=len;d++){const day=new Date(y,m,d),k=isoDay(day),cols=[...new Set(byDay[k]||[])],tk=isoDay(now);
+    const pend=k<S.settings.planStart?[]:todayList(day).filter(r=>!r.mobility&&!S.sessions.some(s=>s.routineId===r.id&&isoDay(s.start)===k)).map(r=>`<i class="${k<tk?"miss":"pl"}" style="--c:${catColor(r)}"></i>`);
+    c+=`<button type="button" class="d tap ${tk===k?"today":""}" data-cday="${k}" aria-label="${d}">${d}<span class="dots">${cols.map(x=>`<i style="--c:${x}"></i>`).join("")}${pend.join("")}</span></button>`}
   const mName=calM.toLocaleDateString("es-ES",{month:"long",year:"numeric"});
   view().innerHTML=`<h1>Calendario</h1>${demoBanner()}<p class="sub" style="margin-top:8px">Toca un día para ver qué hiciste o qué toca. Cada color es un tipo de entreno. La racha cuenta semanas seguidas con al menos un entreno.</p>
   <div class="stats" style="margin-top:16px"><div class="stat" style="--c:var(--gold)"><div class="big">${streak()}</div><div class="lbl">semanas racha</div></div>
@@ -74,8 +76,9 @@ function calDaySheet(k){const d=new Date(k+"T12:00:00"),ss=S.sessions.filter(s=>
   const plan=todayList(d),future=k>=today;
   openSheet(`<p class="lbl">${d.toLocaleDateString("es-ES",{weekday:"long"})}</p><h3>${d.toLocaleDateString("es-ES",{day:"numeric",month:"long"})}</h3>
   <span class="lbl" style="display:block;margin-top:14px">Hecho</span><div class="stack" style="margin-top:8px">${ss.map(s=>sessRow(s)).join("")||`<p class="sub">Nada registrado este día.</p>`}</div>
+  ${movedFrom(k).map(mv=>{const r=routineById(mv.rid);return r?`<p class="sub" style="margin-top:12px">${esc(r.name)}: ${mv.to?`movida al ${fmtDay(mv.to)}`:"saltada"}</p>`:""}).join("")}
   <span class="lbl" style="display:block;margin-top:16px">${future?"Toca":"Tocaba"}</span><div class="stack" style="margin-top:8px">${plan.map(r=>`<button class="tap item" data-cprev="${esc(r.id)}" type="button" style="--c:${catColor(r)}"><div class="thumb" style="width:52px;height:42px">${poseSVG((r.items[0]||{}).ex||"stand")}</div><div class="grow"><div class="t">${esc(r.name)}</div><div class="s">${CATS[catOf(r)].n}</div></div><span class="chev">→</span></button>`).join("")||`<p class="sub">Descanso.</p>`}</div>
   <button class="btn wide" id="cdClose" type="button" style="margin-top:16px">Cerrar</button>`,()=>{
     document.querySelectorAll("#sheetRoot [data-sess]").forEach(b=>b.onclick=()=>sessionSheet(b.dataset.sess));
-    document.querySelectorAll("#sheetRoot [data-cprev]").forEach(b=>b.onclick=()=>{closeSheet();openPreview(b.dataset.cprev)});
+    document.querySelectorAll("#sheetRoot [data-cprev]").forEach(b=>b.onclick=()=>{closeSheet();openPreview(b.dataset.cprev,k)});
     $("#cdClose").onclick=closeSheet})}
