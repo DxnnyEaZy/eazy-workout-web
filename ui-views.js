@@ -62,7 +62,7 @@ function onResume(){resumeTimer();if(active)keepAwake();scheduleReminders();soft
   $("#btnSettings").onclick=settingsSheet;
   $("#tMinus").onclick=()=>shiftTimer(-15);$("#tPlus").onclick=()=>shiftTimer(15);$("#tSkip").onclick=stopTimer;
   $("#importFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{let d;try{d=JSON.parse(rd.result)}catch(x){toast("Ese archivo no es una copia válida");return}
-    confirmSheet("¿Reemplazar tus datos?",`Se cargarán ${(d.routines||[]).length} rutinas y ${(d.sessions||[]).length} sesiones. Lo que tienes ahora se sustituye.`,"Importar",()=>{try{importJSON(rd.result);render();scheduleReminders();toast("Datos importados")}catch(x){toast("Ese archivo no es una copia de EaZy-Workout")}},false)};rd.readAsText(f);e.target.value=""};
+    confirmSheet("¿Reemplazar tus datos?",`Se cargarán ${(d.routines||[]).length} rutinas y ${(d.sessions||[]).length} sesiones. Lo que tienes ahora se sustituye (podrás deshacerlo en Ajustes).`,"Importar",async()=>{try{await importJSON(rd.result);render();scheduleReminders();toast("Datos importados. Puedes deshacerlo en Ajustes")}catch(x){toast("Ese archivo no es una copia de EaZy-Workout")}},false)};rd.readAsText(f);e.target.value=""};
   setInterval(()=>{const el=$("#elapsed");if(el&&active)el.textContent=fmtClock((Date.now()-active.start)/1000)},1000);
   document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")onResume()});
   await load();if(!S.profile){if(IS_IOS&&!STANDALONE&&!NATIVE)iosInstallGate();else startOnboarding()}else render();

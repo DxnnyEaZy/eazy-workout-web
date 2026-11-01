@@ -3,7 +3,8 @@
 const S={routines:[],custom:[],schedule:{},sessions:[],body:[],goals:[],profile:null,demoDone:false,
   settings:{planStart:"",weekOverride:0,remindOn:true,remindTime:"18:30",morningTime:"08:30"}};
 let active=null;
-const KEY="diario.v2", KEY_ACTIVE="diario.active";
+const KEY="diario.v2", KEY_ACTIVE="diario.active", KEY_PREV="diario.prev";
+let PREV=null; /* copia de los datos de antes de la última importación (2.9) */
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const num=v=>{const n=parseFloat(String(v??"").replace(",","."));return isNaN(n)?0:n};
 const Pref=()=>window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform()?window.Capacitor.Plugins.Preferences:null;
@@ -26,6 +27,7 @@ async function load(){const d=await kvGet(KEY);
   else{S.routines=[];S.schedule={0:[],1:[],2:[],3:[],4:[],5:[],6:[]}}
   if(!S.settings.planStart)S.settings.planStart=isoDay(mondayOf(new Date()));
   active=await kvGet(KEY_ACTIVE);
+  PREV=await kvGet(KEY_PREV);
   LOADED=true;save();
 }
 
@@ -64,8 +66,13 @@ function makeDemo(){const out=[],mon=mondayOf(new Date());
 
 /* ===== Exportar / informe ===== */
 function exportJSON(){return JSON.stringify({app:"diario",v:2,exported:new Date().toISOString(),routines:S.routines,custom:S.custom,schedule:S.schedule,settings:S.settings,sessions:S.sessions,body:S.body,goals:S.goals,profile:S.profile})}
-function importJSON(txt){const d=JSON.parse(txt);if(!d||!Array.isArray(d.routines)||!Array.isArray(d.sessions))throw new Error("formato");
-  S.routines=d.routines;S.custom=d.custom||[];S.schedule=d.schedule||structuredClone(DEFAULT_SCHEDULE);S.sessions=d.sessions;S.body=d.body||[];S.goals=d.goals||S.goals;S.profile=d.profile||S.profile;S.demoDone=true;Object.assign(S.settings,d.settings||{});save()}
+function checkImport(txt){const d=JSON.parse(txt);if(!d||!Array.isArray(d.routines)||!Array.isArray(d.sessions))throw new Error("formato");return d}
+function applyData(d){S.routines=d.routines;S.custom=d.custom||[];S.schedule=d.schedule||structuredClone(DEFAULT_SCHEDULE);S.sessions=d.sessions;S.body=d.body||[];S.goals=d.goals||S.goals;S.profile=d.profile||S.profile;S.demoDone=true;Object.assign(S.settings,d.settings||{});save()}
+/* Importar: primero se guarda (y se espera) la copia de lo que hay, después se reemplaza. Solo se guarda la última. */
+async function importJSON(txt){const d=checkImport(txt);const prev={at:Date.now(),data:JSON.parse(JSON.stringify(snapshot()))};
+  await kvSet(KEY_PREV,prev);PREV=prev;applyData(d)}
+function undoImport(){if(!PREV||!PREV.data)return false;const d=PREV.data;S.routines=d.routines;S.custom=d.custom||[];S.schedule=d.schedule;S.sessions=d.sessions;S.body=d.body||[];S.goals=d.goals||[];S.profile=d.profile||null;S.demoDone=!!d.demoDone;
+  for(const k of Object.keys(S.settings))delete S.settings[k];Object.assign(S.settings,d.settings);save();PREV=null;kvSet(KEY_PREV,null);return true}
 function weeklyReport(days=7){const from=Date.now()-days*864e5,w=planWeek(),ss=real().filter(s=>s.start>=from).sort((a,b)=>a.start-b.start);
   const L=[`Resumen EaZy-Workout · ${(S.profile&&S.profile.name)||""} · ${new Date().toLocaleDateString("es-ES")} · Semana ${w} de ${planLen()}${blockOver()?" (bloque terminado)":""}`,`Sesiones últimos ${days} días: ${ss.length}`,""];
   const plan=[];for(let i=days-1;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);if(isoDay(d)<S.settings.planStart)continue;for(const r of todayList(d)){if(r.mobility)continue;

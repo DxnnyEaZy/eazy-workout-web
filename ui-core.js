@@ -61,6 +61,7 @@ function settingsSheet(){const st=S.settings,w=planWeek(),demoN=S.sessions.filte
     <button class="btn wide" id="stReport" type="button">Exportar resumen semanal</button>
     <button class="btn wide" id="stExport" type="button">Exportar copia completa (.json)</button>
     <button class="btn wide" id="stImport" type="button">Importar copia</button>
+    ${PREV&&PREV.data?`<button class="btn wide" id="stUndo" type="button">Deshacer la última importación (${new Date(PREV.at).toLocaleDateString("es-ES",{day:"numeric",month:"short"})} ${new Date(PREV.at).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})})</button>`:""}
     <button class="btn wide" id="stDemo" type="button" ${demoN?"":"disabled"}>Borrar datos de ejemplo (${demoN})</button>
     ${NATIVE?`<button class="btn wide" id="stTest" type="button">Probar notificación en 5 s</button>`:""}
     <button class="btn wide" id="stRedo" type="button">Volver a configurar mi plan</button>
@@ -78,6 +79,7 @@ function settingsSheet(){const st=S.settings,w=planWeek(),demoN=S.sessions.filte
     $("#stReport").onclick=async()=>{const r=await shareText("Resumen EaZy-Workout",weeklyReport(7));if(r==="copied")toast("Resumen copiado")};
     $("#stExport").onclick=async()=>{const r=await shareFile(`eazy-workout-${isoDay(new Date())}.json`,exportJSON());if(r==="copied")toast("Copia copiada al portapapeles")};
     $("#stImport").onclick=()=>$("#importFile").click();
+    if($("#stUndo"))$("#stUndo").onclick=()=>confirmSheet("¿Deshacer la importación?","Vuelven tus datos de antes de importar y se quitan los importados.","Deshacer",()=>{if(undoImport()){render();scheduleReminders();toast("Importación deshecha")}},false);
     $("#stDemo").onclick=()=>{S.sessions=S.sessions.filter(s=>!s.demo);save();closeSheet();render();toast("Datos de ejemplo borrados")};
     if($("#stTest"))$("#stTest").onclick=async()=>{if(!NATIVE){toast("Solo funciona en la app del móvil");return}
       if(!(await notifyPermissionOk())){toast("Activa las notificaciones de EaZy-Workout en Ajustes de Android");return}
