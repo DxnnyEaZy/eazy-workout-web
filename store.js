@@ -27,7 +27,7 @@ async function load(){const d=await kvGet(KEY);
   else{S.routines=[];S.schedule={0:[],1:[],2:[],3:[],4:[],5:[],6:[]}}
   if(!S.settings.planStart)S.settings.planStart=isoDay(mondayOf(new Date()));
   active=await kvGet(KEY_ACTIVE);
-  PREV=await kvGet(KEY_PREV);
+  PREV=await kvGet(KEY_PREV);BKMETA=await kvGet(KEY_BKMETA);
   LOADED=true;save();
 }
 
@@ -65,14 +65,36 @@ function makeDemo(){const out=[],mon=mondayOf(new Date());
   return out}
 
 /* ===== Exportar / informe ===== */
-function exportJSON(){return JSON.stringify({app:"diario",v:2,exported:new Date().toISOString(),routines:S.routines,custom:S.custom,schedule:S.schedule,settings:S.settings,sessions:S.sessions,body:S.body,goals:S.goals,profile:S.profile})}
+function exportJSON(){return JSON.stringify({app:"diario",v:2,exported:new Date().toISOString(),routines:S.routines,custom:S.custom,schedule:S.schedule,settings:S.settings,sessions:S.sessions,body:S.body,goals:S.goals,profile:S.profile,active})}
 function checkImport(txt){const d=JSON.parse(txt);if(!d||!Array.isArray(d.routines)||!Array.isArray(d.sessions))throw new Error("formato");return d}
-function applyData(d){S.routines=d.routines;S.custom=d.custom||[];S.schedule=d.schedule||structuredClone(DEFAULT_SCHEDULE);S.sessions=d.sessions;S.body=d.body||[];S.goals=d.goals||S.goals;S.profile=d.profile||S.profile;S.demoDone=true;Object.assign(S.settings,d.settings||{});save()}
+function applyData(d){S.routines=d.routines;S.custom=d.custom||[];S.schedule=d.schedule||structuredClone(DEFAULT_SCHEDULE);S.sessions=d.sessions;S.body=d.body||[];S.goals=d.goals||S.goals;S.profile=d.profile||S.profile;S.demoDone=true;Object.assign(S.settings,d.settings||{});save();if("active" in d){active=d.active||null;saveActive()}}
 /* Importar: primero se guarda (y se espera) la copia de lo que hay, después se reemplaza. Solo se guarda la última. */
-async function importJSON(txt){const d=checkImport(txt);const prev={at:Date.now(),data:JSON.parse(JSON.stringify(snapshot()))};
+async function importJSON(txt){const d=checkImport(txt);const prev={at:Date.now(),data:JSON.parse(JSON.stringify(snapshot())),active:active?JSON.parse(JSON.stringify(active)):null};
   await kvSet(KEY_PREV,prev);PREV=prev;applyData(d)}
 function undoImport(){if(!PREV||!PREV.data)return false;const d=PREV.data;S.routines=d.routines;S.custom=d.custom||[];S.schedule=d.schedule;S.sessions=d.sessions;S.body=d.body||[];S.goals=d.goals||[];S.profile=d.profile||null;S.demoDone=!!d.demoDone;
-  for(const k of Object.keys(S.settings))delete S.settings[k];Object.assign(S.settings,d.settings);save();PREV=null;kvSet(KEY_PREV,null);return true}
+  for(const k of Object.keys(S.settings))delete S.settings[k];Object.assign(S.settings,d.settings);save();if("active" in PREV){active=PREV.active||null;saveActive()}PREV=null;kvSet(KEY_PREV,null);return true}
+/* ===== Copia automática (2.10.0) =====
+   Una copia al día (al abrir la app y al terminar una sesión; la del día se reescribe) y se guardan las 7 últimas.
+   Móvil: Documentos/EaZy-Workout; si Android no deja escribir ahí, la carpeta interna de la app. Web: el propio navegador. */
+const BK_DIR="EaZy-Workout",BK_KEEP=7,KEY_BKMETA="diario.bkmeta",KEY_BKWEB="diario.backups",bkName=day=>`eazy-workout-${day}.json`,BK_RE=/^eazy-workout-(\d{4}-\d{2}-\d{2})\.json$/;
+let BKMETA=null; /* {day, at, where:"docs"|"app"|"web"} de la última copia */
+async function bkWrite(day,text){const FS=P("Filesystem");
+  if(!FS){const l=(await kvGet(KEY_BKWEB)||[]).filter(x=>x.day!==day);l.push({day,text});l.sort((a,b)=>a.day<b.day?-1:1);await kvSet(KEY_BKWEB,l.slice(-BK_KEEP));return "web"}
+  for(const [dir,where] of [["DOCUMENTS","docs"],["DATA","app"]]){
+    try{await FS.writeFile({path:`${BK_DIR}/${bkName(day)}`,data:text,directory:dir,encoding:"utf8",recursive:true});await bkPrune(FS,dir);return where}catch(e){console.warn("copia",dir,e)}}
+  throw new Error("No se pudo guardar la copia")}
+async function bkPrune(FS,dir){const r=await FS.readdir({path:BK_DIR,directory:dir});
+  const days=(r.files||[]).map(f=>(typeof f==="string"?f:f.name)).filter(n=>BK_RE.test(n)).sort();
+  for(const n of days.slice(0,Math.max(0,days.length-BK_KEEP)))await FS.deleteFile({path:`${BK_DIR}/${n}`,directory:dir})}
+/* lista de copias, la más nueva primero: [{day, read()}] */
+async function bkList(){const FS=P("Filesystem");
+  if(!FS)return (await kvGet(KEY_BKWEB)||[]).slice().reverse().map(x=>({day:x.day,read:async()=>x.text}));
+  const dir=BKMETA&&BKMETA.where==="app"?"DATA":"DOCUMENTS";
+  try{const r=await FS.readdir({path:BK_DIR,directory:dir});
+    return (r.files||[]).map(f=>(typeof f==="string"?f:f.name)).filter(n=>BK_RE.test(n)).sort().reverse()
+      .map(n=>({day:n.match(BK_RE)[1],read:async()=>(await FS.readFile({path:`${BK_DIR}/${n}`,directory:dir,encoding:"utf8"})).data}))}catch(e){return []}}
+async function autoBackup(force){if(!LOADED)return;const day=isoDay(new Date());if(!force&&BKMETA&&BKMETA.day===day)return;
+  try{const where=await bkWrite(day,exportJSON());BKMETA={day,at:Date.now(),where};await kvSet(KEY_BKMETA,BKMETA)}catch(e){console.warn(e)}}
 function weeklyReport(days=7){const from=Date.now()-days*864e5,w=planWeek(),ss=real().filter(s=>s.start>=from).sort((a,b)=>a.start-b.start);
   const L=[`Resumen EaZy-Workout · ${(S.profile&&S.profile.name)||""} · ${new Date().toLocaleDateString("es-ES")} · Semana ${w} de ${planLen()}${blockOver()?" (bloque terminado)":""}`,`Sesiones últimos ${days} días: ${ss.length}`,""];
   const plan=[];for(let i=days-1;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);if(isoDay(d)<S.settings.planStart)continue;for(const r of todayList(d)){if(r.mobility)continue;

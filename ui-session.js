@@ -91,7 +91,7 @@ function saveSession(feel){const a=active,prev=prMap();
   const items=a.items.map(i=>({ex:i.ex,sets:i.sets.filter(s=>s.done).map(s=>({a:num(s.a),b:s.b===""||s.b==null?"":num(s.b),done:true}))})).filter(i=>i.sets.length);
   const sess={id:a.id,routineId:a.routineId,name:a.name,week:a.week,start:a.start,end:Date.now(),items,feel};
   const prs=items.map(i=>{const e=exById(i.ex),b=best(e.t,i.sets),p=prev[i.ex];return (!p||b>p.v)&&b>0?{n:e.n,v:b,u:TYPE[e.t].best,old:p?p.v:null}:null}).filter(Boolean);
-  S.sessions.push(sess);save();active=null;saveActive();stopTimer();haptic("heavy");
+  S.sessions.push(sess);save();active=null;saveActive();stopTimer();haptic("heavy");autoBackup(true);
   const sets=items.reduce((n,i)=>n+i.sets.length,0),v=volume(sess);
   openSheet(`<p class="lbl acc">Guardado</p><h3>${esc(sess.name)}</h3><div class="stats" style="margin:16px 0">
     <div class="stat"><div class="v">${Math.round((sess.end-sess.start)/60000)}</div><div class="lbl">minutos</div></div>

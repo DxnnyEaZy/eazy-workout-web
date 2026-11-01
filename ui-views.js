@@ -56,7 +56,7 @@ function viewEditor(rid){const r=routineById(rid);if(!r){back();return}
 }
 
 /* ===== Progreso ===== */
-function onResume(){resumeTimer();if(active)keepAwake();scheduleReminders();softRender()}
+function onResume(){resumeTimer();if(active)keepAwake();scheduleReminders();autoBackup();softRender()}
 (async()=>{
   document.querySelectorAll(".navbtn").forEach(b=>b.onclick=()=>go(b.dataset.tab));
   $("#btnSettings").onclick=settingsSheet;
@@ -66,6 +66,6 @@ function onResume(){resumeTimer();if(active)keepAwake();scheduleReminders();soft
   setInterval(()=>{const el=$("#elapsed");if(el&&active)el.textContent=fmtClock((Date.now()-active.start)/1000)},1000);
   document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")onResume()});
   await load();if(!S.profile){if(IS_IOS&&!STANDALONE&&!NATIVE)iosInstallGate();else startOnboarding()}else render();
-  await nativeInit();scheduleReminders();
+  await nativeInit();scheduleReminders();autoBackup();
   const A=P("App");if(A)A.addListener("backButton",()=>{if(!back())A.minimizeApp()});
 })();

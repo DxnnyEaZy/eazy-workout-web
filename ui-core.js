@@ -37,6 +37,12 @@ const backBtn=label=>`<button class="btn sm" id="back" type="button" style="marg
 function bindBack(){const b=$("#back");if(b)b.onclick=back}
 
 /* ajustes */
+function restoreSheet(){bkList().then(list=>openSheet(`<h3>Restaurar una copia</h3><p class="sub">Tus datos actuales se guardan antes y podrás deshacerlo en Ajustes.</p>
+  <div class="stack" style="margin-top:12px">${list.length?list.map((b,i)=>`<button class="btn wide" type="button" data-bk="${i}">${new Date(b.day+"T12:00:00").toLocaleDateString("es-ES",{weekday:"long",day:"numeric",month:"long"})}</button>`).join(""):`<p class="sub">Todavía no hay copias.</p>`}</div>
+  <button class="btn wide" id="bkCancel" type="button" style="margin-top:12px">Cancelar</button>`,()=>{
+  $("#bkCancel").onclick=closeSheet;
+  document.querySelectorAll("[data-bk]").forEach(b=>b.onclick=async()=>{const it=list[+b.dataset.bk];
+    try{await importJSON(await it.read());closeSheet();render();scheduleReminders();toast("Copia restaurada. Puedes deshacerlo en Ajustes")}catch(e){toast("No se pudo leer esa copia")}})}))}
 function settingsSheet(){const st=S.settings,w=planWeek(),demoN=S.sessions.filter(s=>s.demo).length;
   const pr=S.profile||{zones:[]};
   openSheet(`<h3>Ajustes</h3>
@@ -58,6 +64,9 @@ function settingsSheet(){const st=S.settings,w=planWeek(),demoN=S.sessions.filte
     <span class="lbl">Duración del plan</span><div class="row">${[4,5,6,8].map(n=>`<button type="button" class="btn sm grow ${planLen()===n?"on-z":""}" data-len="${n}">${n} sem</button>`).join("")}</div>
     <label class="f"><span class="lbl">Inicio del plan (lunes de la semana 1)</span><input type="date" id="stStart" value="${esc(st.planStart)}"></label>
     <span class="lbl" style="margin-top:8px">Tus datos</span>
+    <div class="card" style="margin:0;--c:var(--good)"><p style="margin:0;font-weight:500">Copia automática: activada</p>
+      <p class="sub" style="margin:4px 0 12px">${BKMETA?`Última: ${new Date(BKMETA.at).toLocaleDateString("es-ES",{weekday:"short",day:"numeric",month:"short"})} ${new Date(BKMETA.at).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})} · `:""}se guardan las 7 últimas<br>${BKMETA&&BKMETA.where==="app"?"En la carpeta interna de la app":BKMETA&&BKMETA.where==="web"?"En este navegador":"Documentos / EaZy-Workout"} · no te protege si pierdes el móvil: sube alguna a Drive de vez en cuando</p>
+      <div class="row"><button class="btn grow" id="stBkNow" type="button">Copiar ahora</button><button class="btn grow" id="stBkRestore" type="button">Restaurar…</button></div></div>
     <button class="btn wide" id="stReport" type="button">Exportar resumen semanal</button>
     <button class="btn wide" id="stExport" type="button">Exportar copia completa (.json)</button>
     <button class="btn wide" id="stImport" type="button">Importar copia</button>
@@ -79,6 +88,8 @@ function settingsSheet(){const st=S.settings,w=planWeek(),demoN=S.sessions.filte
     $("#stReport").onclick=async()=>{const r=await shareText("Resumen EaZy-Workout",weeklyReport(7));if(r==="copied")toast("Resumen copiado")};
     $("#stExport").onclick=async()=>{const r=await shareFile(`eazy-workout-${isoDay(new Date())}.json`,exportJSON());if(r==="copied")toast("Copia copiada al portapapeles")};
     $("#stImport").onclick=()=>$("#importFile").click();
+    $("#stBkNow").onclick=async()=>{await autoBackup(true);toast(BKMETA?"Copia guardada":"No se pudo guardar la copia");closeSheet();settingsSheet()};
+    $("#stBkRestore").onclick=restoreSheet;
     if($("#stUndo"))$("#stUndo").onclick=()=>confirmSheet("¿Deshacer la importación?","Vuelven tus datos de antes de importar y se quitan los importados.","Deshacer",()=>{if(undoImport()){render();scheduleReminders();toast("Importación deshecha")}},false);
     $("#stDemo").onclick=()=>{S.sessions=S.sessions.filter(s=>!s.demo);save();closeSheet();render();toast("Datos de ejemplo borrados")};
     if($("#stTest"))$("#stTest").onclick=async()=>{if(!NATIVE){toast("Solo funciona en la app del móvil");return}
